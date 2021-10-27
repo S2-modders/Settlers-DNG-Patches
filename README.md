@@ -8,3 +8,14 @@ Widescreen fix for The Settlers: 10th anniversary edition
     - `S2DNG.exe` SHA256 `178a4299a2dc441aa8ed2f32e050f9a99ef40150f42e2c1acd8b00933db1285e`
 
 **NOTE:** Patched CD version without noCD patch *should* also work, but it is not tested.
+
+
+## Showcase
+### Original
+![originalunpatched](images/original.png)
+
+### Patched
+![patched](images/WidescreenPatch.jpg)
+
+### Patched + FogPatch
+![patchedandfog](images/WidescreenPatch_FogPatch.jpg)
