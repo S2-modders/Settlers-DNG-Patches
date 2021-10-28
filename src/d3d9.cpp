@@ -1,3 +1,10 @@
+/*
+ * Widescreen patch for The Settlers: 10th anniversary by zocker_160
+ *
+ * This source code is licensed under GPL-v3
+ *
+ */
+
 #include "d3d9.h"
 #include "ZoomPatch.h"
 
