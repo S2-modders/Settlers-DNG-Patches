@@ -220,15 +220,16 @@ bool WINAPI DllMain(HMODULE hModule, DWORD fdwReason, LPVOID lpReserved) {
         GetModuleFileNameA(hm, path, sizeof(path));
         *strrchr(path, '\\') = '\0';
         strcat_s(path, "\\d3d9.ini");
+        /* read settings from ini */
         bForceWindowedMode = GetPrivateProfileInt("DX", "ForceWindowedMode", 0, path) != 0;
         bZoomPatch = GetPrivateProfileIntA("ZoomPatch", "ZoomPatch", 0, path) != 0;
-        bDebugMode = GetPrivateProfileIntA("ZoomPatch", "ZoomPatchDebugMode", 0, path) != 0;
-        if (bZoomPatch) {
-            if (bDebugMode)
-                CreateThread(0, 0, ZoomPatchThreadDebug, hModule, 0, 0);
-            else
-                CreateThread(0, 0, ZoomPatchThread, hModule, 0, 0);
-        }
+
+        threadData* tData = new threadData;
+        tData->bDebugMode = GetPrivateProfileIntA("ZoomPatch", "ZoomPatchDebugMode", 0, path) != 0;
+        tData->ZoomIncrement = static_cast<float>(GetPrivateProfileIntA("ZoomPatch", "ZoomPatchStep", 10, path)) / 10.0f;
+
+        if (bZoomPatch)
+            CreateThread(0, 0, ZoomPatchThread, tData, 0, 0);
 
         fFPSLimit = static_cast<float>(GetPrivateProfileInt("DX", "FPSLimit", 0, path));
         if (fFPSLimit)

@@ -11,14 +11,9 @@
 #include "ZoomPatch.h"
 
 const int version_maj = 1;
-const int version_min = 0;
+const int version_min = 1;
 
 /* memory values */
-struct memoryPTR {
-    DWORD base_address;
-    int total_offsets;
-    int offsets[];
-};
 
 /* Base game */
 memoryPTR MaxZoomPTR_base = {
@@ -170,24 +165,24 @@ bool calcNewZoomValue(int& hor, int& vert, float& zoom_value) {
     if (aspr > 0.0f && aspr <= 20.0f) {
         /* maxZoomValue will be set depending on the Aspect Ratio of the screen */
 
-        if (aspr < 1.4f) {
+        if (aspr < 1.5f) {
             zoom_value = 4.0f;
             return true;
         }
-        else if (aspr < 1.7f) {
+        else if (aspr < 1.9f) {
             zoom_value = 5.0f;
             return true;
         }
-        else if (aspr < 2.0f) {
+        else if (aspr < 2.2f) {
             zoom_value = 6.0f;
             return true;
         }
-        else if (aspr < 2.5f) {
+        else if (aspr < 2.6f) {
             zoom_value = 7.0f;
             return true;
         }
-        else if (aspr >= 2.5f) {
-            zoom_value = 8.0f;
+        else if (aspr >= 2.6f) {
+            zoom_value = 7.0f;
             return true;
         }
         else {
@@ -204,7 +199,7 @@ bool calcNewZoomValue(int& hor, int& vert, float& zoom_value) {
 int MainLoop(memoryPTR& WorldObjectPTR,
     memoryPTR& MaxZoomPTR,
     memoryPTR& CurrZoomPTR,
-    bool debug
+    threadData* tData
     ) {
     float* worldObj;
     float* maxZoom;
@@ -212,6 +207,29 @@ int MainLoop(memoryPTR& WorldObjectPTR,
     int hor;
     int ver;
     float newZoomValue = 4.0f; // 4 is the default zoom value
+    float* zoomStep_p = &tData->ZoomIncrement;
+
+    memoryPTR zoomIncr = {
+        0x20D00E + 0x02,
+        0,
+        { 0x0 }
+    };
+    memoryPTR zoomDecr = {
+        0x20CFE4 + 0x02,
+        0,
+        { 0x0 }
+    };
+
+    /*
+    {
+        DWORD tmp[4];
+        readBytes(tracePointer(&zoomIncr), tmp, 4);
+        std::cout << "ZoomStep " << tData->ZoomIncrement << "\n";
+        std::cout << "ZoomStep " << &tData->ZoomIncrement << "\n";
+        writeBytes(tracePointer(&zoomIncr), &zoomStep_p, 4);
+        writeBytes(tracePointer(&zoomDecr), &zoomStep_p, 4);
+    }
+    */
 
     /* check if WorldObject does exist */
     {
@@ -223,7 +241,7 @@ int MainLoop(memoryPTR& WorldObjectPTR,
     while (true) {
         worldObj = (float*)(tracePointer(&WorldObjectPTR));
 
-        if (debug) {
+        if (tData->bDebugMode) {
             if (IsKeyPressed(VK_F3)) {
                 int t_hor = 0;
                 int t_ver = 0;
@@ -260,11 +278,11 @@ int MainLoop(memoryPTR& WorldObjectPTR,
     }
 }
 
-int MainEntry(bool debug) {
+int MainEntry(threadData* tData) {
     Sleep(1000);
     FILE* f;
 
-    if (debug) {
+    if (tData->bDebugMode) {
         AllocConsole();
         freopen_s(&f, "CONOUT$", "w", stdout);
         startupMessage();
@@ -278,11 +296,11 @@ int MainEntry(bool debug) {
 
     if (checkSupport(sBase)) {
         showMessage("Found Base version.");
-        return MainLoop(WorldObjectPTR_base, MaxZoomPTR_base, CurrZoomPTR_base, debug);
+        return MainLoop(WorldObjectPTR_base, MaxZoomPTR_base, CurrZoomPTR_base, tData);
     }
     else if (checkSupport(sAddon)) {
         showMessage("Found Addon version.");
-        return MainLoop(WorldObjectPTR_addon, MaxZoomPTR_addon, CurrZoomPTR_addon, debug);
+        return MainLoop(WorldObjectPTR_addon, MaxZoomPTR_addon, CurrZoomPTR_addon, tData);
     } else {
         showMessage("Game version not supported!");
         return 0;
@@ -291,10 +309,7 @@ int MainEntry(bool debug) {
 }
 
 DWORD WINAPI ZoomPatchThread(LPVOID param) {
-    return MainEntry(false);
-}
-DWORD WINAPI ZoomPatchThreadDebug(LPVOID param) {
-    return MainEntry(true);
+    return MainEntry(reinterpret_cast<threadData*>(param));
 }
 
 // rename to "DllMain" if you want to use this
