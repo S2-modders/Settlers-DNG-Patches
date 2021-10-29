@@ -11,7 +11,7 @@
 #include "ZoomPatch.h"
 
 const int version_maj = 1;
-const int version_min = 1;
+const int version_min = 2;
 
 /* memory values */
 
@@ -159,34 +159,56 @@ bool checkSupport(char* versionString) {
         return true;
 }
 
-bool calcNewZoomValue(int& hor, int& vert, float& zoom_value) {
+bool calcNewZoomValue(int& hor, int& vert, float& zoom_value, bool wideview) {
     GetDesktopResolution2(hor, vert);
     float aspr = calcAspectRatio(hor, vert);
     if (aspr > 0.0f && aspr <= 20.0f) {
         /* maxZoomValue will be set depending on the Aspect Ratio of the screen */
-
-        if (aspr < 1.5f) {
-            zoom_value = 4.0f;
-            return true;
-        }
-        else if (aspr < 1.9f) {
-            zoom_value = 5.0f;
-            return true;
-        }
-        else if (aspr < 2.2f) {
-            zoom_value = 6.0f;
-            return true;
-        }
-        else if (aspr < 2.6f) {
-            zoom_value = 7.0f;
-            return true;
-        }
-        else if (aspr >= 2.6f) {
-            zoom_value = 7.0f;
-            return true;
+        if (wideview) {
+            if (aspr < 1.5f) {
+                zoom_value = 6.0f;
+                return true;
+            }
+            else if (aspr < 1.9f) {
+                zoom_value = 7.0f;
+                return true;
+            }
+            else if (aspr < 2.6f) {
+                zoom_value = 8.0f;
+                return true;
+            }
+            else if (aspr >= 2.6f) {
+                zoom_value = 9.0f;
+                return true;
+            }
+            else {
+                return false;
+            }
         }
         else {
-            return false;
+            if (aspr < 1.5f) {
+                zoom_value = 4.0f;
+                return true;
+            }
+            else if (aspr < 1.9f) {
+                zoom_value = 5.0f;
+                return true;
+            }
+            else if (aspr < 2.2f) {
+                zoom_value = 6.0f;
+                return true;
+            }
+            else if (aspr < 2.6f) {
+                zoom_value = 7.0f;
+                return true;
+            }
+            else if (aspr >= 2.6f) {
+                zoom_value = 7.0f;
+                return true;
+            }
+            else {
+                return false;
+            }
         }
 
         return true;
@@ -270,8 +292,13 @@ int MainLoop(memoryPTR& WorldObjectPTR,
         /* Zoom hack */
         if (*worldObj != 0) {
             maxZoom = (float*)(tracePointer(&MaxZoomPTR));
-            if (calcNewZoomValue(hor, ver, newZoomValue) && *maxZoom != newZoomValue)
+            if (calcNewZoomValue(hor, ver, newZoomValue, tData->bWideView) && *maxZoom != newZoomValue) {
+                if (tData->bWideView)
+                    showMessage("WideViewMode enabled");
+                else
+                    showMessage("WideViewMode disabled");
                 *maxZoom = newZoomValue;
+            }
         }
 
         Sleep(1000);

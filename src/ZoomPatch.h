@@ -15,6 +15,7 @@ struct memoryPTR {
 
 struct threadData {
     bool bDebugMode;
+    bool bWideView;
     float ZoomIncrement;
 };
 

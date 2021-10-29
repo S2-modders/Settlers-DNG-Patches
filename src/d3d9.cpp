@@ -226,6 +226,7 @@ bool WINAPI DllMain(HMODULE hModule, DWORD fdwReason, LPVOID lpReserved) {
 
         threadData* tData = new threadData;
         tData->bDebugMode = GetPrivateProfileIntA("ZoomPatch", "ZoomPatchDebugMode", 0, path) != 0;
+        tData->bWideView = GetPrivateProfileIntA("ZoomPatch", "WideViewMode", 0, path) != 0;
         tData->ZoomIncrement = static_cast<float>(GetPrivateProfileIntA("ZoomPatch", "ZoomPatchStep", 10, path)) / 10.0f;
 
         if (bZoomPatch)
