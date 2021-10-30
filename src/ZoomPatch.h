@@ -19,4 +19,7 @@ struct threadData {
     float ZoomIncrement;
 };
 
+const int version_maj = 1;
+const int version_min = 3;
+
 DWORD WINAPI ZoomPatchThread(LPVOID param);

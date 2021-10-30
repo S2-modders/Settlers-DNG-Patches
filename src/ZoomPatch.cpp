@@ -10,12 +10,9 @@
 #include <iostream>
 #include "ZoomPatch.h"
 
-const int version_maj = 1;
-const int version_min = 2;
-
 /* memory values */
 
-/* Base game */
+/* DnG Base game (11757) */
 memoryPTR MaxZoomPTR_base = {
     0x002BD4E8,
     2,
@@ -32,7 +29,7 @@ memoryPTR WorldObjectPTR_base = {
     { 0x4C }
 };
 
-/* Wikinger Addon */
+/* DnG Wikinger Addon (11758) */
 memoryPTR MaxZoomPTR_addon = {
     0x002CA528,
     2,
@@ -49,8 +46,28 @@ memoryPTR WorldObjectPTR_addon = {
     { 0x4C }
 };
 
+/* RoC / AdK (34688) */
+memoryPTR MaxZoomPTR_adk = {
+    0x0048CD54,
+    2,
+    { 0x50, 0x2E4 }
+};
+memoryPTR CurrZoomPTR_adk = {
+    0x0048CD54,
+    2,
+    { 0x50, 0x2E0 }
+};
+memoryPTR WorldObjectPTR_adk = {
+    0x0048CD54,
+    1,
+    { 0x50 }
+};
+
 DWORD BaseGameVersionAddr = 0x2C5A30;
 DWORD AddonGameVersionAddr = 0x2D2DB8;
+DWORD ADKGameVersionAddr = 0x495800;
+
+/*###################################*/
 
 // reading and writing stuff / helper functions and other crap
 
@@ -62,8 +79,16 @@ void protectedRead(void* dest, void* src, int n) {
     VirtualProtect(dest, n, oldProtect, &oldProtect);
 }
 /* read from address into read buffer of length len */
-void readBytes(void* read_addr, void* read_buffer, int len) {
-    protectedRead(read_buffer, read_addr, len);
+bool readBytes(void* read_addr, void* read_buffer, int len) {
+    // compile with "/EHa" to make this work
+    // see https://stackoverflow.com/questions/16612444/catch-a-memory-access-violation-in-c
+    try {
+        protectedRead(read_buffer, read_addr, len);
+        return true;
+    }
+    catch (...) {
+        return false;
+    }
 }
 /* write patch of length len to destination address */
 void writeBytes(void* dest_addr, void* patch, int len) {
@@ -143,17 +168,39 @@ void startupMessage() {
     std::cout << "Waiting for application startup...\n";
 }
 
-bool checkSupport(char* versionString) {
+bool checkSettlersII(char* versionString) {
+    char versionSettlers[9] = "Version:"; // All Settlers II remakes have this
+    char tVersion[9];
+
+    if (!readBytes(versionString, tVersion, 8))
+        return false;
+    //memcpy(tVersion, versionString, 8);
+    tVersion[8] = 0;
+
+    showMessage(tVersion);
+
+    if (strcmp(tVersion, versionSettlers) != 0)
+        return false;
+    else
+        return true;
+}
+
+bool checkSettlersVersion(char* versionString) {
     char versionBase[15] = "Version: 11757"; // GOG version & patched CD version + NOCD
     char versionAddon[15] = "Version: 11758"; // Wikings Addon + NOCD
+    char versionADK[15] = "Version: 34688"; // Rise of Cultures / Aufbruch der Kulturen
     char gameVersion[15];
 
-    memcpy(gameVersion, versionString, 14);
+    if (!readBytes(versionString, gameVersion, 14))
+        return false;
+    //memcpy(gameVersion, versionString, 14);
     gameVersion[14] = 0;
 
     showMessage(gameVersion);
 
-    if (strcmp(gameVersion, versionBase) != 0 && strcmp(gameVersion, versionAddon) != 0)
+    if (strcmp(gameVersion, versionBase) != 0
+            && strcmp(gameVersion, versionAddon) != 0
+            && strcmp(gameVersion, versionADK) != 0)
         return false;
     else
         return true;
@@ -320,18 +367,32 @@ int MainEntry(threadData* tData) {
     /* check if gameVersion is supported */
     char* sBase = (char*)((DWORD)getBaseAddress() + BaseGameVersionAddr);
     char* sAddon = (char*)((DWORD)getBaseAddress() + AddonGameVersionAddr);
+    char* sADK = (char*)((DWORD)getBaseAddress() + ADKGameVersionAddr);
+    bool bSupported = false;
 
-    if (checkSupport(sBase)) {
-        showMessage("Found Base version.");
-        return MainLoop(WorldObjectPTR_base, MaxZoomPTR_base, CurrZoomPTR_base, tData);
+    for (int i = 0; i < 4; i++) {
+        if (checkSettlersII(sBase) || checkSettlersII(sAddon) || checkSettlersII(sADK)) {
+            if (checkSettlersVersion(sBase)) {
+                showMessage("Found Base version.");
+                bSupported = true;
+                return MainLoop(WorldObjectPTR_base, MaxZoomPTR_base, CurrZoomPTR_base, tData);
+            }
+            else if (checkSettlersVersion(sAddon)) {
+                showMessage("Found Addon version.");
+                bSupported = true;
+                return MainLoop(WorldObjectPTR_addon, MaxZoomPTR_addon, CurrZoomPTR_addon, tData);
+            }
+            else if (checkSettlersVersion(sADK)) {
+                showMessage("Found ADK version.");
+                bSupported = true;
+                return MainLoop(WorldObjectPTR_adk, MaxZoomPTR_adk, CurrZoomPTR_adk, tData);
+            }
+        }
+        showMessage("retrying...");
+        Sleep(2000);
     }
-    else if (checkSupport(sAddon)) {
-        showMessage("Found Addon version.");
-        return MainLoop(WorldObjectPTR_addon, MaxZoomPTR_addon, CurrZoomPTR_addon, tData);
-    } else {
+    if (!bSupported)
         showMessage("Game version not supported!");
-        return 0;
-    }
     return 0;
 }
 
