@@ -1,6 +1,14 @@
 # The Settlers: 10th anniversary widescreen fix
 Widescreen fix for The Settlers: 10th anniversary edition
 
+## Installation
+
+An installer was created by KonradAr on ModDB, you can download it from there:
+
+https://www.moddb.com/games/the-settlers-ii-10th-anniversary/downloads/widescreen-fix/
+
+or you compile from source of course ;)
+
 ## Supported Versions
 - GOG version (11757)
     - `S2DNG.exe` SHA256 `484a8afc396df4ae0e9429b604993dcb5e238f2c0f0fe6d5085ab4620af548b7`
