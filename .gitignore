@@ -1,1 +1,12 @@
 .directory
+premake*
+VersionInfo*
+
+*.yml
+*.zip
+*.dll
+*.pdb
+*.exp
+*.lib
+
+build/
