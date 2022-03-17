@@ -6,20 +6,26 @@
  */
 #pragma once
 #include <Windows.h>
+#include <vector>
 
 struct memoryPTR {
     DWORD base_address;
-    int total_offsets;
-    int offsets[];
+    std::vector<int> offsets;
 };
 
-struct threadData {
+struct zoomThreadData {
     bool bDebugMode;
     bool bWideView;
     float ZoomIncrement;
 };
 
-const int version_maj = 1;
-const int version_min = 3;
+struct patchData {
+    memoryPTR WorldObject;
+    memoryPTR MaxZoom;
+    memoryPTR CurrZoom;
+};
+
+const int version_maj = 2;
+const int version_min = 0;
 
 DWORD WINAPI ZoomPatchThread(LPVOID param);

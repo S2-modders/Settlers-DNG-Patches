@@ -9,161 +9,58 @@
 #include <sstream>
 #include <iostream>
 #include "ZoomPatch.h"
+#include "Helper.h"
 
 /* memory values */
 
 /* DnG Base game (11757) */
 memoryPTR MaxZoomPTR_base = {
     0x002BD4E8,
-    2,
     { 0x4C, 0x1A8 }
 };
 memoryPTR CurrZoomPTR_base = {
     0x002BD4E8,
-    2,
     { 0x4C, 0x1A4 }
 };
 memoryPTR WorldObjectPTR_base = {
     0x002BD4E8,
-    1,
     { 0x4C }
 };
 
 /* DnG Wikinger Addon (11758) */
 memoryPTR MaxZoomPTR_addon = {
     0x002CA528,
-    2,
     { 0x4C, 0x1BC }
 };
 memoryPTR CurrZoomPTR_addon = {
     0x002CA528,
-    2,
     { 0x4C, 0x1B8 }
 };
 memoryPTR WorldObjectPTR_addon = {
     0x002CA528,
-    1,
     { 0x4C }
 };
 
-/* RoC / AdK (34688) */
-memoryPTR MaxZoomPTR_adk = {
-    0x0048CD54,
-    2,
-    { 0x50, 0x2E4 }
+
+patchData patchBase = {
+    WorldObjectPTR_base,
+    MaxZoomPTR_base,
+    CurrZoomPTR_base
 };
-memoryPTR CurrZoomPTR_adk = {
-    0x0048CD54,
-    2,
-    { 0x50, 0x2E0 }
-};
-memoryPTR WorldObjectPTR_adk = {
-    0x0048CD54,
-    1,
-    { 0x50 }
+
+patchData patchAddon = {
+    WorldObjectPTR_addon,
+    MaxZoomPTR_addon,
+    CurrZoomPTR_addon
 };
 
 DWORD BaseGameVersionAddr = 0x2C5A30;
 DWORD AddonGameVersionAddr = 0x2D2DB8;
-DWORD ADKGameVersionAddr = 0x495800;
 
 /*###################################*/
 
-// reading and writing stuff / helper functions and other crap
-
-/* update memory protection and read with memcpy */
-void protectedRead(void* dest, void* src, int n) {
-    DWORD oldProtect = 0;
-    VirtualProtect(dest, n, PAGE_EXECUTE_READWRITE, &oldProtect);
-    memcpy(dest, src, n);
-    VirtualProtect(dest, n, oldProtect, &oldProtect);
-}
-/* read from address into read buffer of length len */
-bool readBytes(void* read_addr, void* read_buffer, int len) {
-    // compile with "/EHa" to make this work
-    // see https://stackoverflow.com/questions/16612444/catch-a-memory-access-violation-in-c
-    try {
-        protectedRead(read_buffer, read_addr, len);
-        return true;
-    }
-    catch (...) {
-        return false;
-    }
-}
-/* write patch of length len to destination address */
-void writeBytes(void* dest_addr, void* patch, int len) {
-    protectedRead(dest_addr, patch, len);
-}
-
-/* fiddle around with the pointers */
-HMODULE getBaseAddress() {
-    return GetModuleHandle(NULL);
-}
-DWORD* calcAddress(DWORD appl_addr) {
-    return (DWORD*)((DWORD)getBaseAddress() + appl_addr);
-}
-DWORD* tracePointer(memoryPTR* patch) {
-    DWORD* location = calcAddress(patch->base_address);
-
-    for (int i = 0; i < patch->total_offsets; i++) {
-        location = (DWORD*)(*location + patch->offsets[i]);
-    }
-    return location;
-}
-
-float calcAspectRatio(int horizontal, int vertical) {
-    if (horizontal != 0 && vertical != 0) {
-        return (float)horizontal / (float)vertical;
-    }
-    else {
-        return -1.0f;
-    }
-}
-
-/* other helper functions and stuff */
-bool IsKeyPressed(int vKey) {
-    /* some bitmask trickery because why not */
-    return GetAsyncKeyState(vKey) & 0x8000;
-}
-
-void GetDesktopResolution(int& horizontal, int& vertical)
-{
-    RECT desktop;
-    // Get a handle to the desktop window
-    const HWND hDesktop = GetDesktopWindow();
-    // Get the size of screen to the variable desktop
-    GetWindowRect(hDesktop, &desktop);
-    // The top left corner will have coordinates (0,0)
-    // and the bottom right corner will have coordinates
-    // (horizontal, vertical)
-    horizontal = desktop.right;
-    vertical = desktop.bottom;
-}
-void GetDesktopResolution2(int& hor, int& vert) {
-    hor = GetSystemMetrics(SM_CXSCREEN);
-    vert = GetSystemMetrics(SM_CYSCREEN);
-}
-
-void showMessage(float val) {
-    std::cout << "DEBUG: " << val << "\n";
-    return;
-    std::stringstream ss;
-    ss << "Debug: " << val;
-    MessageBoxA(NULL, (LPCSTR)ss.str().c_str(), "ZoomPatch by zocker_160", MB_OK);
-}
-void showMessage(int val) {
-    std::cout << "DEBUG: " << val << "\n";
-    return;
-    std::stringstream ss;
-    ss << "Debug: " << val;
-    MessageBoxA(NULL, (LPCSTR)ss.str().c_str(), "ZoomPatch by zocker_160", MB_OK);
-}
-void showMessage(LPCSTR val) {
-    std::cout << "DEBUG: " << val << "\n";
-    //MessageBoxA(NULL, val, "ZoomPatch by zocker_160", MB_OK);
-}
 void startupMessage() {
-    std::cout << "ZoomPatch by zocker_160 - Version: v" << version_maj << "." << version_min << "\n";
+    std::cout << "ZoomPatch & LobbyPatch by zocker_160 - Version: v" << version_maj << "." << version_min << "\n";
     std::cout << "Debug mode enabled!\n";
     std::cout << "Waiting for application startup...\n";
 }
@@ -188,7 +85,6 @@ bool checkSettlersII(char* versionString) {
 bool checkSettlersVersion(char* versionString) {
     char versionBase[15] = "Version: 11757"; // GOG version & patched CD version + NOCD
     char versionAddon[15] = "Version: 11758"; // Wikings Addon + NOCD
-    char versionADK[15] = "Version: 34688"; // Rise of Cultures / Aufbruch der Kulturen
     char gameVersion[15];
 
     if (!readBytes(versionString, gameVersion, 14))
@@ -199,8 +95,7 @@ bool checkSettlersVersion(char* versionString) {
     showMessage(gameVersion);
 
     if (strcmp(gameVersion, versionBase) != 0
-            && strcmp(gameVersion, versionAddon) != 0
-            && strcmp(gameVersion, versionADK) != 0)
+            && strcmp(gameVersion, versionAddon) != 0)
         return false;
     else
         return true;
@@ -265,11 +160,7 @@ bool calcNewZoomValue(int& hor, int& vert, float& zoom_value, bool wideview) {
     }
 }
 
-int MainLoop(memoryPTR& WorldObjectPTR,
-    memoryPTR& MaxZoomPTR,
-    memoryPTR& CurrZoomPTR,
-    threadData* tData
-    ) {
+int MainLoop(patchData& patchData, zoomThreadData* tData) {
     float* worldObj;
     float* maxZoom;
 
@@ -280,12 +171,10 @@ int MainLoop(memoryPTR& WorldObjectPTR,
 
     memoryPTR zoomIncr = {
         0x20D00E + 0x02,
-        0,
         { 0x0 }
     };
     memoryPTR zoomDecr = {
         0x20CFE4 + 0x02,
-        0,
         { 0x0 }
     };
 
@@ -302,13 +191,13 @@ int MainLoop(memoryPTR& WorldObjectPTR,
 
     /* check if WorldObject does exist */
     {
-        float* tmp = (float*)calcAddress(WorldObjectPTR.base_address);
+        float* tmp = (float*)calcAddress(patchData.WorldObject.base_address);
         if (*tmp < 0)
             return 0;
     }
 
-    while (true) {
-        worldObj = (float*)(tracePointer(&WorldObjectPTR));
+    for (;; Sleep(1000)) {
+        worldObj = (float*)(tracePointer(&patchData.WorldObject));
 
         if (tData->bDebugMode) {
             if (IsKeyPressed(VK_F3)) {
@@ -325,11 +214,11 @@ int MainLoop(memoryPTR& WorldObjectPTR,
             if (IsKeyPressed(VK_F6)) {
                 if (*worldObj != 0) {
                     //*(float*)(tracePointer(&CurrZoomPTR)) += 1.0f;
-                    showMessage(*(float*)(tracePointer(&MaxZoomPTR)));
+                    showMessage(*(float*)(tracePointer(&patchData.MaxZoom)));
                 }
             }
             if (IsKeyPressed(VK_F7)) {
-                showMessage(*(float*)(tracePointer(&CurrZoomPTR)));
+                showMessage(*(float*)(tracePointer(&patchData.CurrZoom)));
             }
             if (IsKeyPressed(VK_F8)) {
                 std::cout << "World address: " << worldObj << "\n";
@@ -338,7 +227,7 @@ int MainLoop(memoryPTR& WorldObjectPTR,
 
         /* Zoom hack */
         if (*worldObj != 0) {
-            maxZoom = (float*)(tracePointer(&MaxZoomPTR));
+            maxZoom = (float*)(tracePointer(&patchData.MaxZoom));
             if (calcNewZoomValue(hor, ver, newZoomValue, tData->bWideView) && *maxZoom != newZoomValue) {
                 if (tData->bWideView)
                     showMessage("WideViewMode enabled");
@@ -347,13 +236,11 @@ int MainLoop(memoryPTR& WorldObjectPTR,
                 *maxZoom = newZoomValue;
             }
         }
-
-        Sleep(1000);
     }
 }
 
-int MainEntry(threadData* tData) {
-    Sleep(1000);
+int ZoomPatch(zoomThreadData* tData) {
+    //Sleep(1000);
     FILE* f;
 
     if (tData->bDebugMode) {
@@ -361,31 +248,26 @@ int MainEntry(threadData* tData) {
         freopen_s(&f, "CONOUT$", "w", stdout);
         startupMessage();
     }
+
     /* wait a bit for the application to start up (might crash otherwise) */
     Sleep(4000);
 
     /* check if gameVersion is supported */
-    char* sBase = (char*)((DWORD)getBaseAddress() + BaseGameVersionAddr);
-    char* sAddon = (char*)((DWORD)getBaseAddress() + AddonGameVersionAddr);
-    char* sADK = (char*)((DWORD)getBaseAddress() + ADKGameVersionAddr);
+    char* sBase = (char*)calcAddress(BaseGameVersionAddr);
+    char* sAddon = (char*)calcAddress(AddonGameVersionAddr);
     bool bSupported = false;
 
     for (int i = 0; i < 4; i++) {
-        if (checkSettlersII(sBase) || checkSettlersII(sAddon) || checkSettlersII(sADK)) {
+        if (checkSettlersII(sBase) || checkSettlersII(sAddon)) {
             if (checkSettlersVersion(sBase)) {
                 showMessage("Found Base version.");
                 bSupported = true;
-                return MainLoop(WorldObjectPTR_base, MaxZoomPTR_base, CurrZoomPTR_base, tData);
+                return MainLoop(patchBase, tData);
             }
             else if (checkSettlersVersion(sAddon)) {
                 showMessage("Found Addon version.");
                 bSupported = true;
-                return MainLoop(WorldObjectPTR_addon, MaxZoomPTR_addon, CurrZoomPTR_addon, tData);
-            }
-            else if (checkSettlersVersion(sADK)) {
-                showMessage("Found ADK version.");
-                bSupported = true;
-                return MainLoop(WorldObjectPTR_adk, MaxZoomPTR_adk, CurrZoomPTR_adk, tData);
+                return MainLoop(patchAddon, tData);
             }
         }
         showMessage("retrying...");
@@ -397,7 +279,7 @@ int MainEntry(threadData* tData) {
 }
 
 DWORD WINAPI ZoomPatchThread(LPVOID param) {
-    return MainEntry(reinterpret_cast<threadData*>(param));
+    return ZoomPatch(reinterpret_cast<zoomThreadData*>(param));
 }
 
 // rename to "DllMain" if you want to use this

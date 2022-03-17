@@ -7,12 +7,13 @@
 
 #include "d3d9.h"
 #include "ZoomPatch.h"
+#include "Lobby.h"
 
 /*************************
 Edit Values
 *************************/
 bool bFPSLimit, bForceWindowedMode;
-bool bZoomPatch, bDebugMode;
+bool bZoomPatch, bDebugMode, bLobbyPatch;
 float fFPSLimit;
 
 HRESULT f_IDirect3DDevice9::Present(CONST RECT *pSourceRect, CONST RECT *pDestRect, HWND hDestWindowOverride, CONST RGNDATA *pDirtyRegion)
@@ -223,14 +224,23 @@ bool WINAPI DllMain(HMODULE hModule, DWORD fdwReason, LPVOID lpReserved) {
         /* read settings from ini */
         bForceWindowedMode = GetPrivateProfileInt("DX", "ForceWindowedMode", 0, path) != 0;
         bZoomPatch = GetPrivateProfileIntA("ZoomPatch", "ZoomPatch", 0, path) != 0;
+        bLobbyPatch = GetPrivateProfileIntA("Lobby", "LobbyPatch", 0, path) != 0;
 
-        threadData* tData = new threadData;
-        tData->bDebugMode = GetPrivateProfileIntA("ZoomPatch", "ZoomPatchDebugMode", 0, path) != 0;
-        tData->bWideView = GetPrivateProfileIntA("ZoomPatch", "WideViewMode", 0, path) != 0;
-        tData->ZoomIncrement = static_cast<float>(GetPrivateProfileIntA("ZoomPatch", "ZoomPatchStep", 10, path)) / 10.0f;
+        zoomThreadData* ztData = new zoomThreadData;
+        ztData->bWideView = GetPrivateProfileIntA("ZoomPatch", "WideViewMode", 0, path) != 0;
+        ztData->ZoomIncrement = static_cast<float>(GetPrivateProfileIntA("ZoomPatch", "ZoomPatchStep", 10, path)) / 10.0f;
+        ztData->bDebugMode = GetPrivateProfileIntA("ZoomPatch", "DebugMode", 0, path) != 0;
+
+        lobbyThreadData* ltData = new lobbyThreadData;
+        ltData->bTincatDebug = GetPrivateProfileIntA("Lobby", "DebugMode", 0, path) != 0;
+        ltData->bDebugMode = ztData->bDebugMode;
+        ltData->gamePath = path;
 
         if (bZoomPatch)
-            CreateThread(0, 0, ZoomPatchThread, tData, 0, 0);
+            CreateThread(0, 0, ZoomPatchThread, ztData, 0, 0);
+
+        if (bLobbyPatch)
+            CreateThread(0, 0, LobbyPatchThread, ltData, 0, 0);
 
         fFPSLimit = static_cast<float>(GetPrivateProfileInt("DX", "FPSLimit", 0, path));
         if (fFPSLimit)
@@ -257,6 +267,10 @@ bool WINAPI DllMain(HMODULE hModule, DWORD fdwReason, LPVOID lpReserved) {
         break;
     }
     case DLL_PROCESS_DETACH:
+        TerminateProcess(bridgeProcessInfo.hProcess, 0);
+        CloseHandle(bridgeProcessInfo.hProcess);
+        CloseHandle(bridgeProcessInfo.hThread);
+
         FreeLibrary(hModule);
         break;
     }
