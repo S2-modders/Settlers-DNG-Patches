@@ -74,6 +74,8 @@ bool functionInjector(void* hookAddr, void* function, int len) {
 
     writeBytes(hookAddr, &jmp, 1);
     writeBytes((DWORD*)((DWORD)hookAddr + 1), &relAddr, 4);
+
+    return true;
 }
 
 
