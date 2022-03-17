@@ -72,16 +72,6 @@ void createTCPBridge() {
 	showMessage(serverIP);
 	showMessage(controllerPort);
 
-	requestRemotePort(serverIP, controllerPort);
-
-	if (bridgePort == 0) {
-		showMessage("failed to get bridge port, aborting");
-		return;
-	}
-
-	ini.SetLongValue("s2lobby", "remote_port", (long) bridgePort);
-	ini.SaveFile(iniPath);
-
 	showMessage("starting TCP bridge...");
 
 	std::stringstream command;
@@ -90,6 +80,16 @@ void createTCPBridge() {
 	showMessage((int) bridgeProcessInfo.dwProcessId);
 
 	if (bridgeProcessInfo.dwProcessId == 0) {
+		requestRemotePort(serverIP, controllerPort);
+
+		if (bridgePort == 0) {
+			showMessage("failed to get bridge port, aborting");
+			return;
+		}
+
+		ini.SetLongValue("s2lobby", "remote_port", (long)bridgePort);
+		ini.SaveFile(iniPath);
+
 		showMessage("Creating new process...");
 
 		ZeroMemory(&si, sizeof(si));
