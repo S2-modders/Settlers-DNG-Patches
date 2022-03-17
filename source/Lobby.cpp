@@ -5,6 +5,7 @@
  *
  */
 
+#define WIN32_LEAN_AND_MEAN
 #include <Windows.h>
 #include <stdlib.h>
 #include <sstream>
@@ -12,6 +13,7 @@
 #include "Helper.h"
 #include "Lobby.h"
 #include "SimpleIni/SimpleIni.h"
+#include "httplib/httplib.h"
 
 STARTUPINFO si;
 PROCESS_INFORMATION bridgeProcessInfo;
@@ -21,9 +23,31 @@ DWORD LoggerAddr2 = 0x751E;
 
 DWORD CreateGamePayloadPortHook = 0x60FA;
 
-unsigned int bridgePort = 10001;
-
 lobbyThreadData* lobbyData;
+unsigned int bridgePort;
+
+void requestRemotePort(const char* ip, int controllerPort) {
+	showMessage("Requesting remote Port");
+
+	std::stringstream url;
+	url << "http://" << ip << ":" << controllerPort;
+
+	httplib::Client cli(url.str());
+
+	if (auto res = cli.Get("/api/request")) {
+		if (res->status == 200) {
+			bridgePort = std::atoi(res->body.c_str());
+
+			showMessage("port received:");
+			showMessage((int) bridgePort);
+
+		} else {
+			showMessage("fail");
+			showMessage(res->status);
+			bridgePort = 0;
+		}
+	}
+}
 
 void createTCPBridge() {
 	char iniPath[MAX_PATH];
@@ -44,9 +68,18 @@ void createTCPBridge() {
 	ini.LoadFile(iniPath);
 
 	const char* serverIP = ini.GetValue("common", "server_addr", "0.0.0.0");
+	long controllerPort = ini.GetLongValue("common", "server_controller_port", 5480);
 	showMessage(serverIP);
+	showMessage(controllerPort);
 
-	ini.SetLongValue("s2lobby", "remote_port", (long) bridgePort); // TODO request port from server
+	requestRemotePort(serverIP, controllerPort);
+
+	if (bridgePort == 0) {
+		showMessage("failed to get bridge port, aborting");
+		return;
+	}
+
+	ini.SetLongValue("s2lobby", "remote_port", (long) bridgePort);
 	ini.SaveFile(iniPath);
 
 	showMessage("starting TCP bridge...");
