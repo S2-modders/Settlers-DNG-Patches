@@ -39,7 +39,7 @@ void requestRemotePort(const char* ip, int controllerPort) {
 			bridgePort = std::atoi(res->body.c_str());
 
 			showMessage("port received:");
-			showMessage((int) bridgePort);
+			showMessage((int)bridgePort);
 
 		} else {
 			showMessage("fail");
@@ -50,10 +50,16 @@ void requestRemotePort(const char* ip, int controllerPort) {
 }
 
 void createTCPBridge() {
+	showMessage("CreateGameServerPayload triggered!");
+
+	showMessage((int)bridgeProcessInfo.dwProcessId);
+	if (bridgeProcessInfo.dwProcessId > 0) {
+		showMessage("Bridge seems to be already running...");
+		return;
+	}
+
 	char iniPath[MAX_PATH];
 	char exePath[MAX_PATH];
-
-	showMessage("CreateGameServerPayload triggered!");
 
 	GetCurrentDirectoryA(MAX_PATH, iniPath);
 
@@ -77,29 +83,24 @@ void createTCPBridge() {
 	std::stringstream command;
 	command << "\"" << exePath << "\" -c .\\bin\\frpc.ini";
 
-	showMessage((int) bridgeProcessInfo.dwProcessId);
+	requestRemotePort(serverIP, controllerPort);
 
-	if (bridgeProcessInfo.dwProcessId == 0) {
-		requestRemotePort(serverIP, controllerPort);
-
-		if (bridgePort == 0) {
-			showMessage("failed to get bridge port, aborting");
-			return;
-		}
-
-		ini.SetLongValue("s2lobby", "remote_port", (long)bridgePort);
-		ini.SaveFile(iniPath);
-
-		showMessage("Creating new process...");
-
-		ZeroMemory(&si, sizeof(si));
-		si.cb = sizeof(si);;
-		ZeroMemory(&bridgeProcessInfo, sizeof(bridgeProcessInfo));
-		
-		CreateProcessA(NULL, (LPSTR)command.str().c_str(), NULL, NULL, false, 0, NULL, NULL, &si, &bridgeProcessInfo);
-	} else {
-		showMessage("Bridge seems to be already running...");
+	if (bridgePort == 0) {
+		showMessage("failed to get bridge port, aborting");
+		return;
 	}
+
+	ini.SetLongValue("s2lobby", "remote_port", (long)bridgePort);
+	ini.SaveFile(iniPath);
+
+	showMessage("Creating new process...");
+
+	ZeroMemory(&si, sizeof(si));
+	si.cb = sizeof(si);;
+	ZeroMemory(&bridgeProcessInfo, sizeof(bridgeProcessInfo));
+		
+	CreateProcessA(NULL, (LPSTR)command.str().c_str(), NULL, NULL, false, 0, NULL, NULL, &si, &bridgeProcessInfo);
+
 	
 	showMessage("End injected function");
 }
@@ -117,7 +118,34 @@ void __declspec(naked) jumperFunction() {
 	}
 }
 
+void setTincatDebugMode() {
+	showMessage("Patching Lobby Debug mode");
+	short lobbyDebug = 0x11EB;
+
+	short* lobby1 = (short*)((DWORD)getMatchmakingAddress() + LoggerAddr1);
+	short* lobby2 = (short*)((DWORD)getMatchmakingAddress() + LoggerAddr2);
+
+	writeBytes(lobby1, &lobbyDebug, 2);
+	writeBytes(lobby2, &lobbyDebug, 2);
+}
+
+void setNetworking(lobbyThreadData* tData) {
+	showMessage("Patching network.ini");
+	char iniPath[MAX_PATH];
+
+	GetCurrentDirectoryA(MAX_PATH, iniPath);
+	strcat_s(iniPath, "\\data\\settings\\network.ini");
+
+	CSimpleIniA ini;
+	ini.SetUnicode();
+	ini.LoadFile(iniPath);
+	ini.SetValue("Lobby", "url", (const char*)tData->serverIP);
+	ini.SetLongValue("Lobby", "patchlevel", (long)tData->patchlevel);
+	ini.SaveFile(iniPath);
+}
+
 int LobbyPatch(lobbyThreadData* tData) {
+	Sleep(500);
 	FILE* f;
 	lobbyData = tData;
 
@@ -126,26 +154,22 @@ int LobbyPatch(lobbyThreadData* tData) {
 		freopen_s(&f, "CONOUT$", "w", stdout);
 	}
 
-	{
-		/* patch lobby / tincat debug mode */
-		if (tData->bDebugMode) {
-			showMessage("Patching Lobby Debug mode");
-			short lobbyDebug = 0x11EB;
+	/* patch network.ini */
+	if (tData->bNetworkPatch)
+		setNetworking(tData);
 
-			short* lobby1 = (short*)((DWORD)getMatchmakingAddress() + LoggerAddr1);
-			short* lobby2 = (short*)((DWORD)getMatchmakingAddress() + LoggerAddr2);
-
-			writeBytes(lobby1, &lobbyDebug, 2);
-			writeBytes(lobby2, &lobbyDebug, 2);
-		}
-	}
+	/* patch lobby / tincat debug mode */
+	if (tData->bDebugMode)
+		setTincatDebugMode();
 
 	/* inject CreateGameServerPayload */
-	int hookLength = 9;
-	DWORD hookAddr = (DWORD)getMatchmakingAddress() + CreateGamePayloadPortHook;
-	jmpBackAddr = hookAddr + hookLength;
+	{
+		int hookLength = 9;
+		DWORD hookAddr = (DWORD)getMatchmakingAddress() + CreateGamePayloadPortHook;
+		jmpBackAddr = hookAddr + hookLength;
 
-	functionInjector((DWORD*)hookAddr, jumperFunction, hookLength);
+		functionInjector((DWORD*)hookAddr, jumperFunction, hookLength);
+	}
 
 	return 0;
 };

@@ -8,11 +8,12 @@
 #include "d3d9.h"
 #include "ZoomPatch.h"
 #include "Lobby.h"
+#include "SimpleIni/SimpleIni.h"
 
 /*************************
 Edit Values
 *************************/
-bool bFPSLimit, bForceWindowedMode;
+bool bFPSLimit, bForceWindowedMode, bCursorFix;
 bool bZoomPatch, bDebugMode, bLobbyPatch;
 float fFPSLimit;
 
@@ -194,17 +195,21 @@ VOID WINAPI f_PSGPSampleTexture(class D3DFE_PROCESSVERTICES* a, unsigned int b, 
 }
 
 /*************************
-Secondary Thread
+ini patching
 *************************/
-DWORD WINAPI SecondaryThread(LPVOID param) {
-    Sleep(5000);
-    if (true) {
-        MessageBoxA(NULL, "hooked DEBUG ON!", "Message from ZoomPatch by zocker_160", MB_OK);
-    }
-    else {
-        MessageBoxA(NULL, "hooked DEBUG OFF!", "Message from ZoomPatch by zocker_160", MB_OK);
-    }
-    return 0;
+void patchEngineIni(bool state) {
+    char iniPath[MAX_PATH];
+    GetCurrentDirectoryA(MAX_PATH, iniPath);
+    *strrchr(iniPath, '\\') = '\0';
+    strcat_s(iniPath, "\\data\\settings\\engine.ini");
+
+    //MessageBoxA(NULL, iniPath, "S2Patch by zocker_160", MB_OK);
+
+    CSimpleIniA ini;
+    ini.SetUnicode();
+    ini.LoadFile(iniPath);
+    ini.SetLongValue("Engine", "hardwareCursor", (long) !state);
+    ini.SaveFile(iniPath);
 }
 
 /*************************
@@ -222,7 +227,7 @@ bool WINAPI DllMain(HMODULE hModule, DWORD fdwReason, LPVOID lpReserved) {
         *strrchr(path, '\\') = '\0';
         strcat_s(path, "\\d3d9.ini");
         /* read settings from ini */
-        bForceWindowedMode = GetPrivateProfileInt("DX", "ForceWindowedMode", 0, path) != 0;
+        bForceWindowedMode = GetPrivateProfileIntA("DX", "ForceWindowedMode", 0, path) != 0;
         bZoomPatch = GetPrivateProfileIntA("ZoomPatch", "ZoomPatch", 0, path) != 0;
         bLobbyPatch = GetPrivateProfileIntA("Lobby", "LobbyPatch", 0, path) != 0;
 
@@ -234,7 +239,10 @@ bool WINAPI DllMain(HMODULE hModule, DWORD fdwReason, LPVOID lpReserved) {
         lobbyThreadData* ltData = new lobbyThreadData;
         ltData->bTincatDebug = GetPrivateProfileIntA("Lobby", "DebugMode", 0, path) != 0;
         ltData->bDebugMode = ztData->bDebugMode;
-        ltData->gamePath = path;
+        ltData->bNetworkPatch = GetPrivateProfileIntA("Network", "NetworkPatch", 0, path) != 0;
+        ltData->serverIP = new char[100];
+        GetPrivateProfileStringA("Network", "ServerIP", "www.diesiedler2lobby.de:8777", ltData->serverIP, 100, path);
+        ltData->patchlevel = GetPrivateProfileIntA("Network", "Patchlevel", 9212, path);
 
         if (bZoomPatch)
             CreateThread(0, 0, ZoomPatchThread, ztData, 0, 0);
@@ -245,6 +253,9 @@ bool WINAPI DllMain(HMODULE hModule, DWORD fdwReason, LPVOID lpReserved) {
         fFPSLimit = static_cast<float>(GetPrivateProfileInt("DX", "FPSLimit", 0, path));
         if (fFPSLimit)
             bFPSLimit = true;
+
+        bCursorFix = GetPrivateProfileIntA("Engine", "CursorFix", 0, path) != 0;
+        patchEngineIni(bCursorFix);
 
         GetSystemDirectory(path, MAX_PATH);
         strcat_s(path, "\\d3d9.dll");

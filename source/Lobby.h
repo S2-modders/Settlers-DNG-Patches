@@ -10,8 +10,10 @@
 
 struct lobbyThreadData {
 	bool bTincatDebug;
+	bool bNetworkPatch;
 	bool bDebugMode;
-	char* gamePath;
+	char* serverIP;
+	int patchlevel;
 };
 
 extern PROCESS_INFORMATION bridgeProcessInfo;
