@@ -26,6 +26,7 @@ memoryPTR WorldObjectPTR_base = {
     0x002BD4E8,
     { 0x4C }
 };
+DWORD LobbyVersionFilter_base = 0x107055;
 
 /* DnG Wikinger Addon (11758) */
 memoryPTR MaxZoomPTR_addon = {
@@ -40,18 +41,20 @@ memoryPTR WorldObjectPTR_addon = {
     0x002CA528,
     { 0x4C }
 };
-
+DWORD LobbyVersionFilter_addon = 0x00; // unknown
 
 patchData patchBase = {
     WorldObjectPTR_base,
     MaxZoomPTR_base,
-    CurrZoomPTR_base
+    CurrZoomPTR_base,
+    LobbyVersionFilter_base
 };
 
 patchData patchAddon = {
     WorldObjectPTR_addon,
     MaxZoomPTR_addon,
-    CurrZoomPTR_addon
+    CurrZoomPTR_addon,
+    LobbyVersionFilter_addon
 };
 
 DWORD BaseGameVersionAddr = 0x2C5A30;
@@ -169,17 +172,18 @@ int MainLoop(patchData& patchData, zoomThreadData* tData) {
     float newZoomValue = 4.0f; // 4 is the default zoom value
     float* zoomStep_p = &tData->ZoomIncrement;
 
-    memoryPTR zoomIncr = {
-        0x20D00E + 0x02,
-        { 0x0 }
-    };
-    memoryPTR zoomDecr = {
-        0x20CFE4 + 0x02,
-        { 0x0 }
-    };
 
     /*
     {
+        memoryPTR zoomIncr = {
+            0x20D00E + 0x02,
+            { 0x0 }
+        };
+        memoryPTR zoomDecr = {
+            0x20CFE4 + 0x02,
+            { 0x0 }
+        };
+
         DWORD tmp[4];
         readBytes(tracePointer(&zoomIncr), tmp, 4);
         std::cout << "ZoomStep " << tData->ZoomIncrement << "\n";
@@ -188,6 +192,17 @@ int MainLoop(patchData& patchData, zoomThreadData* tData) {
         writeBytes(tracePointer(&zoomDecr), &zoomStep_p, 4);
     }
     */
+
+    /* lobby version filter patch */
+    {
+        if (patchData.FilterPatch != 0) {
+            showMessage("patching lobby version filter");
+
+            short jne = 0x1E75;
+            short* filter = (short*)calcAddress(patchData.FilterPatch);
+            writeBytes(filter, &jne, 2);
+        }
+    }
 
     /* check if WorldObject does exist */
     {

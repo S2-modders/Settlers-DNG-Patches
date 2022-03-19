@@ -23,6 +23,7 @@ struct patchData {
     memoryPTR WorldObject;
     memoryPTR MaxZoom;
     memoryPTR CurrZoom;
+    DWORD FilterPatch;
 };
 
 const int version_maj = 2;
