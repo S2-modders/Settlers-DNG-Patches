@@ -2,17 +2,20 @@
  * Widescreen patch for The Settlers: 10th anniversary by zocker_160
  *
  * This source code is licensed under GPL-v3
- *
  */
 
 #include "d3d9.h"
 #include "ZoomPatch.h"
+#include "Lobby.h"
+#include "Config.h"
+
+#include "SimpleIni/SimpleIni.h"
 
 /*************************
 Edit Values
 *************************/
+
 bool bFPSLimit, bForceWindowedMode;
-bool bZoomPatch, bDebugMode;
 float fFPSLimit;
 
 HRESULT f_IDirect3DDevice9::Present(CONST RECT *pSourceRect, CONST RECT *pDestRect, HWND hDestWindowOverride, CONST RGNDATA *pDirtyRegion)
@@ -193,22 +196,29 @@ VOID WINAPI f_PSGPSampleTexture(class D3DFE_PROCESSVERTICES* a, unsigned int b, 
 }
 
 /*************************
-Secondary Thread
+ini patching
 *************************/
-DWORD WINAPI SecondaryThread(LPVOID param) {
-    Sleep(5000);
-    if (true) {
-        MessageBoxA(NULL, "hooked DEBUG ON!", "Message from ZoomPatch by zocker_160", MB_OK);
-    }
-    else {
-        MessageBoxA(NULL, "hooked DEBUG OFF!", "Message from ZoomPatch by zocker_160", MB_OK);
-    }
-    return 0;
+void patchEngineIni(bool state) {
+    char iniPath[MAX_PATH];
+    GetCurrentDirectoryA(MAX_PATH, iniPath);
+    *strrchr(iniPath, '\\') = '\0';
+    strcat_s(iniPath, "\\data\\settings\\engine.ini");
+
+    //MessageBoxA(NULL, iniPath, "S2Patch by zocker_160", MB_OK);
+
+    CSimpleIniA ini;
+    ini.SetUnicode();
+    ini.LoadFile(iniPath);
+    ini.SetLongValue("Engine", "hardwareCursor", (long) !state);
+    ini.SaveFile(iniPath);
 }
+
+CSimpleIni config;
 
 /*************************
 DllMain
 *************************/
+
 bool WINAPI DllMain(HMODULE hModule, DWORD fdwReason, LPVOID lpReserved) {
     switch (fdwReason)
     {
@@ -220,21 +230,35 @@ bool WINAPI DllMain(HMODULE hModule, DWORD fdwReason, LPVOID lpReserved) {
         GetModuleFileNameA(hm, path, sizeof(path));
         *strrchr(path, '\\') = '\0';
         strcat_s(path, "\\d3d9.ini");
-        /* read settings from ini */
-        bForceWindowedMode = GetPrivateProfileInt("DX", "ForceWindowedMode", 0, path) != 0;
-        bZoomPatch = GetPrivateProfileIntA("ZoomPatch", "ZoomPatch", 0, path) != 0;
 
-        threadData* tData = new threadData;
-        tData->bDebugMode = GetPrivateProfileIntA("ZoomPatch", "ZoomPatchDebugMode", 0, path) != 0;
-        tData->bWideView = GetPrivateProfileIntA("ZoomPatch", "WideViewMode", 0, path) != 0;
-        tData->ZoomIncrement = static_cast<float>(GetPrivateProfileIntA("ZoomPatch", "ZoomPatchStep", 10, path)) / 10.0f;
+        char engineINI[MAX_PATH];
+        GetCurrentDirectoryA(MAX_PATH, engineINI);
+        *strrchr(engineINI, '\\') = '\0';
+        strcat_s(engineINI, "\\data\\settings\\engine.ini");
 
-        if (bZoomPatch)
-            CreateThread(0, 0, ZoomPatchThread, tData, 0, 0);
+        //MessageBoxA(NULL, engineINI, "TEST", MB_OK);
 
-        fFPSLimit = static_cast<float>(GetPrivateProfileInt("DX", "FPSLimit", 0, path));
+        config.SetUnicode();
+        config.LoadFile(path);
+
+        EngineData* engineData = loadEngineSettings(config);
+        CameraData* cameraData = loadCameraSettings(config);
+        LobbyData* lobbyData = loadLobbySettings(config);
+
+        setEngineData(engineINI, engineData);
+
+        if (cameraData->bEnabled)
+            CreateThread(0, 0, ZoomPatchThread, cameraData, 0, 0);
+
+        //if (lobbyData->bEnabled)
+        if (false) // disabled for now
+            CreateThread(0, 0, LobbyPatchThread, lobbyData, 0, 0);
+
+        fFPSLimit = static_cast<float>(engineData->fpsLimit);
+
         if (fFPSLimit)
             bFPSLimit = true;
+
 
         GetSystemDirectory(path, MAX_PATH);
         strcat_s(path, "\\d3d9.dll");
@@ -257,6 +281,10 @@ bool WINAPI DllMain(HMODULE hModule, DWORD fdwReason, LPVOID lpReserved) {
         break;
     }
     case DLL_PROCESS_DETACH:
+        TerminateProcess(bridgeProcessInfo.hProcess, 0);
+        CloseHandle(bridgeProcessInfo.hProcess);
+        CloseHandle(bridgeProcessInfo.hThread);
+
         FreeLibrary(hModule);
         break;
     }
