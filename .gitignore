@@ -9,4 +9,6 @@ VersionInfo*
 *.exp
 *.lib
 
+data/frpc*
+
 build/
