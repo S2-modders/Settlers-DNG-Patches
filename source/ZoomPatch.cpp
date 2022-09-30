@@ -11,62 +11,267 @@
 #include "ZoomPatch.h"
 #include "Helper.h"
 
-/* memory values */
+/* 
+ * memory values 
+ */
 
-/* DnG Base game (11757) */
-memoryPTR MaxZoomPTR_base = {
-    0x002BD4E8,
-    { 0x4C, 0x1A8 }
-};
-memoryPTR CurrZoomPTR_base = {
-    0x002BD4E8,
-    { 0x4C, 0x1A4 }
-};
-memoryPTR WorldObjectPTR_base = {
-    0x002BD4E8,
-    { 0x4C }
-};
-DWORD LobbyVersionFilter_base = 0x107055;
+/* DNG Base game (11757) */
+namespace Base { 
 
-/* DnG Wikinger Addon (11758) */
-memoryPTR MaxZoomPTR_addon = {
-    0x002CA528,
-    { 0x4C, 0x1BC }
-};
-memoryPTR CurrZoomPTR_addon = {
-    0x002CA528,
-    { 0x4C, 0x1B8 }
-};
-memoryPTR WorldObjectPTR_addon = {
-    0x002CA528,
-    { 0x4C }
-};
-DWORD LobbyVersionFilter_addon = 0x00; // unknown
+    memoryPTR maxZoom = {
+        0x002BD4E8,
+        { 0x4C, 0x1A8 }
+    };
 
-patchData patchBase = {
-    WorldObjectPTR_base,
-    MaxZoomPTR_base,
-    CurrZoomPTR_base,
-    LobbyVersionFilter_base
-};
+    memoryPTR currZoom = {
+        0x002BD4E8,
+        { 0x4C, 0x1A4 }
+    };
 
-patchData patchAddon = {
-    WorldObjectPTR_addon,
-    MaxZoomPTR_addon,
-    CurrZoomPTR_addon,
-    LobbyVersionFilter_addon
-};
+    memoryPTR worldObject = {
+        0x002BD4E8,
+        { 0x4C }
+    };
 
-DWORD BaseGameVersionAddr = 0x2C5A30;
-DWORD AddonGameVersionAddr = 0x2D2DB8;
+    DWORD lobbyVersionFilterAddr = 0x107055;
+    DWORD gameVersionAddr = 0x2C5A30;
+
+
+    PatchData patchData = {
+        worldObject,
+        maxZoom,
+        currZoom,
+        lobbyVersionFilterAddr,
+        gameVersionAddr
+    };
+
+}
+
+/* DNG Wikinger Addon (11758) */
+namespace Addon {
+
+    memoryPTR maxZoom = {
+        0x002CA528,
+        { 0x4C, 0x1BC }
+    };
+
+    memoryPTR currZoom = {
+        0x002CA528,
+        { 0x4C, 0x1B8 }
+    };
+
+    memoryPTR worldObject = {
+        0x002CA528,
+        { 0x4C }
+    };
+
+    DWORD lobbyVersionFilterAddr = 0x00; // unknown
+    DWORD gameVersionAddr = 0x2D2DB8;
+
+
+    PatchData patchData = {
+        worldObject,
+        maxZoom,
+        currZoom,
+        lobbyVersionFilterAddr,
+        gameVersionAddr
+    };
+}
 
 /*###################################*/
 
-void startupMessage() {
-    std::cout << "ZoomPatch & LobbyPatch by zocker_160 - Version: v" << version_maj << "." << version_min << "\n";
-    std::cout << "Debug mode enabled!\n";
-    std::cout << "Waiting for application startup...\n";
-}
+
+class ZoomPatch {
+
+public:
+
+    explicit ZoomPatch(PatchData& patchData, CameraData* cameraData) : patchData(patchData) {
+        this->cameraData = cameraData;
+    }
+
+    int run() {
+        if (!isWorldObject())
+            return 0;
+
+        //patchLobbyFilter();
+
+        for (;; Sleep(1000)) {
+            worldObj = (float*)tracePointer(&patchData.worldObject);
+            patchZoom();
+            //setZoomIncrement();
+
+            doDebug();
+        }
+    }
+
+    static void startupMessage() {
+        std::cout << "ZoomPatch & LobbyPatch by zocker_160 - Version: v" << version_maj << "." << version_min << "\n";
+        std::cout << "Debug mode enabled!\n";
+        std::cout << "Waiting for application startup...\n";
+    }
+
+private:
+
+    PatchData& patchData;
+    CameraData* cameraData;
+    
+    float* worldObj;
+    float* maxZoom;
+
+    int hor, ver;
+    float newZoomValue = 4.0f; // 4 is the default zoom value
+
+
+    bool isWorldObject() {
+        float* tmp = (float*)calcAddress(patchData.worldObject.base_address);
+
+        if (*tmp < 0) {
+            showMessage("WorldObject does not exist!");
+            return false;
+        }
+        else
+            return true;
+    }
+
+    void patchZoom() {
+        if (*worldObj == 0)
+            return;
+
+        maxZoom = (float*)tracePointer(&patchData.maxZoom);
+        if (calcZoomValue() && *maxZoom != newZoomValue) {
+            if (cameraData->bWideView)
+                showMessage("WideView enabled");
+            else
+                showMessage("WideView disabled");
+
+            *maxZoom = newZoomValue;
+        }
+    }
+
+    void patchLobbyFilter() {
+        if (patchData.lobbyVersionFilterAddr == 0)
+            return;
+
+        showMessage("patching lobby version filter");
+
+        short jne = 0x1E75;
+        short* filter = (short*)calcAddress(patchData.lobbyVersionFilterAddr);
+        writeBytes(filter, &jne, 2);
+    }
+
+    void setZoomIncrement() {
+        //float* zoomStep_p = &tData->fZoomIncrement;
+
+        /*
+        memoryPTR zoomIncr = {
+            0x20D00E + 0x02,
+            { 0x0 }
+        };
+        memoryPTR zoomDecr = {
+            0x20CFE4 + 0x02,
+            { 0x0 }
+        };
+
+        DWORD tmp[4];
+        readBytes(tracePointer(&zoomIncr), tmp, 4);
+        std::cout << "ZoomStep " << tData->ZoomIncrement << "\n";
+        std::cout << "ZoomStep " << &tData->ZoomIncrement << "\n";
+        writeBytes(tracePointer(&zoomIncr), &zoomStep_p, 4);
+        writeBytes(tracePointer(&zoomDecr), &zoomStep_p, 4);
+        */
+    }
+
+    bool calcZoomValue() {
+        GetDesktopResolution2(hor, ver);
+        float aspr = calcAspectRatio(hor, ver);
+
+        if (aspr > 0.0f && aspr <= 20.0f) {
+            /* maxZoomValue will be set depending on the aspect ratio of the screen */
+            if (cameraData->bWideView) {
+                if (aspr < 1.5f) {
+                    newZoomValue = 6.0f;
+                    return true;
+                }
+                else if (aspr < 1.9f) {
+                    newZoomValue = 7.0f;
+                    return true;
+                }
+                else if (aspr < 2.6f) {
+                    newZoomValue = 8.0f;
+                    return true;
+                }
+                else if (aspr >= 2.6f) {
+                    newZoomValue = 9.0f;
+                    return true;
+                }
+                else {
+                    return false;
+                }
+            }
+            else {
+                if (aspr < 1.5f) {
+                    newZoomValue = 4.0f;
+                    return true;
+                }
+                else if (aspr < 1.9f) {
+                    newZoomValue = 5.0f;
+                    return true;
+                }
+                else if (aspr < 2.2f) {
+                    newZoomValue = 6.0f;
+                    return true;
+                }
+                else if (aspr < 2.6f) {
+                    newZoomValue = 7.0f;
+                    return true;
+                }
+                else if (aspr >= 2.6f) {
+                    newZoomValue = 7.0f;
+                    return true;
+                }
+                else {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+        else {
+            return false;
+        }
+    }
+
+    void doDebug() {
+        if (!cameraData->bDebugMode)
+            return;
+
+        if (IsKeyPressed(VK_F3)) {
+            int t_hor = 0;
+            int t_ver = 0;
+            GetDesktopResolution2(t_hor, t_ver);
+            std::stringstream ss;
+            ss << "DEBUG:  xRes: " << t_hor << " yRes: " << t_ver;
+            ss << " ASPR: " << calcAspectRatio(t_hor, t_ver);
+            ss << " MaxZoomValue: " << newZoomValue;
+            std::cout << ss.str() << "\n";
+            //MessageBoxA(NULL, (LPCSTR)ss.str().c_str(), "ZoomPatch by zocker_160", MB_OK);
+        }
+        if (IsKeyPressed(VK_F6)) {
+            if (*worldObj != 0) {
+                //*(float*)(tracePointer(&CurrZoomPTR)) += 1.0f;
+                showMessage(*(float*)(tracePointer(&patchData.maxZoom)));
+            }
+        }
+        if (IsKeyPressed(VK_F7)) {
+            showMessage(*(float*)(tracePointer(&patchData.currZoom)));
+        }
+        if (IsKeyPressed(VK_F8)) {
+            std::cout << "World address: " << worldObj << " World value: " << *worldObj << "\n";
+        }
+    }
+
+};
+
 
 bool checkSettlersII(char* versionString) {
     char versionSettlers[9] = "Version:"; // All Settlers II remakes have this
@@ -86,8 +291,8 @@ bool checkSettlersII(char* versionString) {
 }
 
 bool checkSettlersVersion(char* versionString) {
-    char versionBase[15] = "Version: 11757"; // GOG version & patched CD version + NOCD
-    char versionAddon[15] = "Version: 11758"; // Wikings Addon + NOCD
+    char versionBase[15] = "Version: 11757"; // GOG version & patched CD version
+    char versionAddon[15] = "Version: 11758"; // Wikings Addon
     char gameVersion[15];
 
     if (!readBytes(versionString, gameVersion, 14))
@@ -104,194 +309,51 @@ bool checkSettlersVersion(char* versionString) {
         return true;
 }
 
-bool calcNewZoomValue(int& hor, int& vert, float& zoom_value, bool wideview) {
-    GetDesktopResolution2(hor, vert);
-    float aspr = calcAspectRatio(hor, vert);
-    if (aspr > 0.0f && aspr <= 20.0f) {
-        /* maxZoomValue will be set depending on the Aspect Ratio of the screen */
-        if (wideview) {
-            if (aspr < 1.5f) {
-                zoom_value = 6.0f;
-                return true;
-            }
-            else if (aspr < 1.9f) {
-                zoom_value = 7.0f;
-                return true;
-            }
-            else if (aspr < 2.6f) {
-                zoom_value = 8.0f;
-                return true;
-            }
-            else if (aspr >= 2.6f) {
-                zoom_value = 9.0f;
-                return true;
-            }
-            else {
-                return false;
-            }
-        }
-        else {
-            if (aspr < 1.5f) {
-                zoom_value = 4.0f;
-                return true;
-            }
-            else if (aspr < 1.9f) {
-                zoom_value = 5.0f;
-                return true;
-            }
-            else if (aspr < 2.2f) {
-                zoom_value = 6.0f;
-                return true;
-            }
-            else if (aspr < 2.6f) {
-                zoom_value = 7.0f;
-                return true;
-            }
-            else if (aspr >= 2.6f) {
-                zoom_value = 7.0f;
-                return true;
-            }
-            else {
-                return false;
-            }
-        }
 
-        return true;
-    }
-    else {
-        return false;
-    }
-}
-
-int MainLoop(patchData& patchData, CameraData* tData) {
-    float* worldObj;
-    float* maxZoom;
-
-    int hor;
-    int ver;
-    float newZoomValue = 4.0f; // 4 is the default zoom value
-    float* zoomStep_p = &tData->fZoomIncrement;
-
-
-    /*
-    {
-        memoryPTR zoomIncr = {
-            0x20D00E + 0x02,
-            { 0x0 }
-        };
-        memoryPTR zoomDecr = {
-            0x20CFE4 + 0x02,
-            { 0x0 }
-        };
-
-        DWORD tmp[4];
-        readBytes(tracePointer(&zoomIncr), tmp, 4);
-        std::cout << "ZoomStep " << tData->ZoomIncrement << "\n";
-        std::cout << "ZoomStep " << &tData->ZoomIncrement << "\n";
-        writeBytes(tracePointer(&zoomIncr), &zoomStep_p, 4);
-        writeBytes(tracePointer(&zoomDecr), &zoomStep_p, 4);
-    }
-    */
-
-    /* lobby version filter patch */
-    {
-        if (patchData.FilterPatch != 0) {
-            showMessage("patching lobby version filter");
-
-            short jne = 0x1E75;
-            short* filter = (short*)calcAddress(patchData.FilterPatch);
-            writeBytes(filter, &jne, 2);
-        }
-    }
-
-    /* check if WorldObject does exist */
-    {
-        float* tmp = (float*)calcAddress(patchData.WorldObject.base_address);
-        if (*tmp < 0)
-            return 0;
-    }
-
-    for (;; Sleep(1000)) {
-        worldObj = (float*)(tracePointer(&patchData.WorldObject));
-
-        if (tData->bDebugMode) {
-            if (IsKeyPressed(VK_F3)) {
-                int t_hor = 0;
-                int t_ver = 0;
-                GetDesktopResolution2(t_hor, t_ver);
-                std::stringstream ss;
-                ss << "DEBUG:  xRes: " << t_hor << " yRes: " << t_ver;
-                ss << " ASPR: " << calcAspectRatio(t_hor, t_ver);
-                ss << " MaxZoomValue: " << newZoomValue;
-                std::cout << ss.str() << "\n";
-                //MessageBoxA(NULL, (LPCSTR)ss.str().c_str(), "ZoomPatch by zocker_160", MB_OK);
-            }
-            if (IsKeyPressed(VK_F6)) {
-                if (*worldObj != 0) {
-                    //*(float*)(tracePointer(&CurrZoomPTR)) += 1.0f;
-                    showMessage(*(float*)(tracePointer(&patchData.MaxZoom)));
-                }
-            }
-            if (IsKeyPressed(VK_F7)) {
-                showMessage(*(float*)(tracePointer(&patchData.CurrZoom)));
-            }
-            if (IsKeyPressed(VK_F8)) {
-                std::cout << "World address: " << worldObj << "\n";
-            }
-        }
-
-        /* Zoom hack */
-        if (*worldObj != 0) {
-            maxZoom = (float*)(tracePointer(&patchData.MaxZoom));
-            if (calcNewZoomValue(hor, ver, newZoomValue, tData->bWideView) && *maxZoom != newZoomValue) {
-                if (tData->bWideView)
-                    showMessage("WideViewMode enabled");
-                else
-                    showMessage("WideViewMode disabled");
-                *maxZoom = newZoomValue;
-            }
-        }
-    }
-}
-
-int ZoomPatch(CameraData* tData) {
+int prepare(CameraData* cData) {
     FILE* f;
 
-    if (tData->bDebugMode) {
+    if (cData->bDebugMode) {
         AllocConsole();
         freopen_s(&f, "CONOUT$", "w", stdout);
-        startupMessage();
+        ZoomPatch::startupMessage();
     }
 
     /* wait a bit for the application to start up (might crash otherwise) */
     Sleep(4000);
 
     /* check if gameVersion is supported */
-    char* sBase = (char*)calcAddress(BaseGameVersionAddr);
-    char* sAddon = (char*)calcAddress(AddonGameVersionAddr);
+    char* sBase = (char*)calcAddress(Base::gameVersionAddr);
+    char* sAddon = (char*)calcAddress(Addon::gameVersionAddr);
     bool bSupported = false;
 
-    for (int i = 0; i < 4; i++) {
+    for (int i = 0; i < retryCount; i++) {
+
         if (checkSettlersII(sBase) || checkSettlersII(sAddon)) {
             if (checkSettlersVersion(sBase)) {
                 showMessage("Found Base version.");
                 bSupported = true;
-                return MainLoop(patchBase, tData);
+
+                return ZoomPatch(Base::patchData, cData).run();
             }
             else if (checkSettlersVersion(sAddon)) {
                 showMessage("Found Addon version.");
                 bSupported = true;
-                return MainLoop(patchAddon, tData);
+
+                return ZoomPatch(Addon::patchData, cData).run();
             }
         }
+
         showMessage("retrying...");
-        Sleep(2000);
+        Sleep(retryTimeout);
     }
+
     if (!bSupported)
-        showMessage("Game version not supported!");
+        showMessage("This game version is not supported!");
+
     return 0;
 }
 
 DWORD WINAPI ZoomPatchThread(LPVOID param) {
-    return ZoomPatch(reinterpret_cast<CameraData*>(param));
+    return prepare(reinterpret_cast<CameraData*>(param));
 }

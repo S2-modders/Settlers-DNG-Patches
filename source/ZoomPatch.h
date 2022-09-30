@@ -20,14 +20,18 @@ struct CameraData {
     float fZoomIncrement;
 };
 
-struct patchData {
-    memoryPTR WorldObject;
-    memoryPTR MaxZoom;
-    memoryPTR CurrZoom;
-    DWORD FilterPatch;
+struct PatchData {
+    memoryPTR worldObject;
+    memoryPTR maxZoom;
+    memoryPTR currZoom;
+    DWORD lobbyVersionFilterAddr;
+    DWORD gameVersionAddr;
 };
 
 const int version_maj = 1;
 const int version_min = 4;
+
+const int retryCount = 4;
+const int retryTimeout = 2000;
 
 DWORD WINAPI ZoomPatchThread(LPVOID param);
