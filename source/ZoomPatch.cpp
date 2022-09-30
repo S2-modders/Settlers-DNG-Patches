@@ -163,14 +163,14 @@ bool calcNewZoomValue(int& hor, int& vert, float& zoom_value, bool wideview) {
     }
 }
 
-int MainLoop(patchData& patchData, zoomThreadData* tData) {
+int MainLoop(patchData& patchData, CameraData* tData) {
     float* worldObj;
     float* maxZoom;
 
     int hor;
     int ver;
     float newZoomValue = 4.0f; // 4 is the default zoom value
-    float* zoomStep_p = &tData->ZoomIncrement;
+    float* zoomStep_p = &tData->fZoomIncrement;
 
 
     /*
@@ -254,8 +254,7 @@ int MainLoop(patchData& patchData, zoomThreadData* tData) {
     }
 }
 
-int ZoomPatch(zoomThreadData* tData) {
-    //Sleep(1000);
+int ZoomPatch(CameraData* tData) {
     FILE* f;
 
     if (tData->bDebugMode) {
@@ -294,24 +293,5 @@ int ZoomPatch(zoomThreadData* tData) {
 }
 
 DWORD WINAPI ZoomPatchThread(LPVOID param) {
-    return ZoomPatch(reinterpret_cast<zoomThreadData*>(param));
-}
-
-// rename to "DllMain" if you want to use this
-bool APIENTRY DllMain_alt(  HMODULE hModule,
-                            DWORD  ul_reason_for_call,
-                            LPVOID lpReserved
-                          ) {
-    switch (ul_reason_for_call) {
-    case DLL_PROCESS_ATTACH:
-        //SetProcessDPIAware();
-        CreateThread(0, 0, ZoomPatchThread, hModule, 0, 0);
-        return 0;
-    case DLL_THREAD_ATTACH:
-    case DLL_THREAD_DETACH:
-    case DLL_PROCESS_DETACH:
-        FreeLibraryAndExitThread(hModule, 0);
-        return 0;
-    }
-    return 0;
+    return ZoomPatch(reinterpret_cast<CameraData*>(param));
 }

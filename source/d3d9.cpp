@@ -2,19 +2,20 @@
  * Widescreen patch for The Settlers: 10th anniversary by zocker_160
  *
  * This source code is licensed under GPL-v3
- *
  */
 
 #include "d3d9.h"
 #include "ZoomPatch.h"
 #include "Lobby.h"
+#include "Config.h"
+
 #include "SimpleIni/SimpleIni.h"
 
 /*************************
 Edit Values
 *************************/
-bool bFPSLimit, bForceWindowedMode, bCursorFix;
-bool bZoomPatch, bDebugMode, bLobbyPatch;
+
+bool bFPSLimit, bForceWindowedMode;
 float fFPSLimit;
 
 HRESULT f_IDirect3DDevice9::Present(CONST RECT *pSourceRect, CONST RECT *pDestRect, HWND hDestWindowOverride, CONST RGNDATA *pDirtyRegion)
@@ -212,9 +213,12 @@ void patchEngineIni(bool state) {
     ini.SaveFile(iniPath);
 }
 
+CSimpleIni config;
+
 /*************************
 DllMain
 *************************/
+
 bool WINAPI DllMain(HMODULE hModule, DWORD fdwReason, LPVOID lpReserved) {
     switch (fdwReason)
     {
@@ -226,36 +230,35 @@ bool WINAPI DllMain(HMODULE hModule, DWORD fdwReason, LPVOID lpReserved) {
         GetModuleFileNameA(hm, path, sizeof(path));
         *strrchr(path, '\\') = '\0';
         strcat_s(path, "\\d3d9.ini");
-        /* read settings from ini */
-        bForceWindowedMode = GetPrivateProfileIntA("DX", "ForceWindowedMode", 0, path) != 0;
-        bZoomPatch = GetPrivateProfileIntA("ZoomPatch", "ZoomPatch", 0, path) != 0;
-        bLobbyPatch = GetPrivateProfileIntA("Lobby", "LobbyPatch", 0, path) != 0;
 
-        zoomThreadData* ztData = new zoomThreadData;
-        ztData->bWideView = GetPrivateProfileIntA("ZoomPatch", "WideViewMode", 0, path) != 0;
-        ztData->ZoomIncrement = static_cast<float>(GetPrivateProfileIntA("ZoomPatch", "ZoomPatchStep", 10, path)) / 10.0f;
-        ztData->bDebugMode = GetPrivateProfileIntA("ZoomPatch", "DebugMode", 0, path) != 0;
+        char engineINI[MAX_PATH];
+        GetCurrentDirectoryA(MAX_PATH, engineINI);
+        *strrchr(engineINI, '\\') = '\0';
+        strcat_s(engineINI, "\\data\\settings\\engine.ini");
 
-        lobbyThreadData* ltData = new lobbyThreadData;
-        ltData->bTincatDebug = GetPrivateProfileIntA("Lobby", "DebugMode", 0, path) != 0;
-        ltData->bDebugMode = ztData->bDebugMode;
-        ltData->bNetworkPatch = GetPrivateProfileIntA("Network", "NetworkPatch", 0, path) != 0;
-        ltData->serverIP = new char[100];
-        GetPrivateProfileStringA("Network", "ServerIP", "www.diesiedler2lobby.de:8777", ltData->serverIP, 100, path);
-        ltData->patchlevel = GetPrivateProfileIntA("Network", "Patchlevel", 9212, path);
+        //MessageBoxA(NULL, engineINI, "TEST", MB_OK);
 
-        if (bZoomPatch)
-            CreateThread(0, 0, ZoomPatchThread, ztData, 0, 0);
+        config.SetUnicode();
+        config.LoadFile(path);
 
-        if (bLobbyPatch)
-            CreateThread(0, 0, LobbyPatchThread, ltData, 0, 0);
+        EngineData* engineData = loadEngineSettings(config);
+        CameraData* cameraData = loadCameraSettings(config);
+        LobbyData* lobbyData = loadLobbySettings(config);
 
-        fFPSLimit = static_cast<float>(GetPrivateProfileInt("DX", "FPSLimit", 0, path));
+        setEngineData(engineINI, engineData);
+
+        if (cameraData->bEnabled)
+            CreateThread(0, 0, ZoomPatchThread, cameraData, 0, 0);
+
+        //if (lobbyData->bEnabled)
+        if (false) // disabled for now
+            CreateThread(0, 0, LobbyPatchThread, lobbyData, 0, 0);
+
+        fFPSLimit = static_cast<float>(engineData->fpsLimit);
+
         if (fFPSLimit)
             bFPSLimit = true;
 
-        bCursorFix = GetPrivateProfileIntA("Engine", "CursorFix", 0, path) != 0;
-        patchEngineIni(bCursorFix);
 
         GetSystemDirectory(path, MAX_PATH);
         strcat_s(path, "\\d3d9.dll");

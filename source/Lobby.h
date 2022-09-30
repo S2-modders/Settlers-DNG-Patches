@@ -8,11 +8,12 @@
 #pragma once
 #include <Windows.h>
 
-struct lobbyThreadData {
+struct LobbyData {
+	bool bEnabled;
 	bool bTincatDebug;
 	bool bNetworkPatch;
 	bool bDebugMode;
-	char* serverIP;
+	const char* serverIP;
 	int patchlevel;
 };
 

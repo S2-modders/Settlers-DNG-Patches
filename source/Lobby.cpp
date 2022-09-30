@@ -23,7 +23,7 @@ DWORD LoggerAddr2 = 0x751E;
 
 DWORD CreateGamePayloadPortHook = 0x60FA;
 
-lobbyThreadData* lobbyData;
+LobbyData* lobbyData;
 unsigned int bridgePort;
 
 void requestRemotePort(const char* ip, int controllerPort) {
@@ -129,7 +129,7 @@ void setTincatDebugMode() {
 	writeBytes(lobby2, &lobbyDebug, 2);
 }
 
-void setNetworking(lobbyThreadData* tData) {
+void setNetworking(LobbyData* tData) {
 	showMessage("Patching network.ini");
 	char iniPath[MAX_PATH];
 
@@ -144,7 +144,7 @@ void setNetworking(lobbyThreadData* tData) {
 	ini.SaveFile(iniPath);
 }
 
-int LobbyPatch(lobbyThreadData* tData) {
+int LobbyPatch(LobbyData* tData) {
 	Sleep(500);
 	FILE* f;
 	lobbyData = tData;
@@ -175,5 +175,5 @@ int LobbyPatch(lobbyThreadData* tData) {
 };
 
 DWORD WINAPI LobbyPatchThread(LPVOID param) {
-	return LobbyPatch(reinterpret_cast<lobbyThreadData*>(param));
+	return LobbyPatch(reinterpret_cast<LobbyData*>(param));
 }

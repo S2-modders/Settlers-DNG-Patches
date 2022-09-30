@@ -13,10 +13,11 @@ struct memoryPTR {
     std::vector<int> offsets;
 };
 
-struct zoomThreadData {
+struct CameraData {
+    bool bEnabled;
     bool bDebugMode;
     bool bWideView;
-    float ZoomIncrement;
+    float fZoomIncrement;
 };
 
 struct patchData {
@@ -26,7 +27,7 @@ struct patchData {
     DWORD FilterPatch;
 };
 
-const int version_maj = 2;
-const int version_min = 0;
+const int version_maj = 1;
+const int version_min = 4;
 
 DWORD WINAPI ZoomPatchThread(LPVOID param);
