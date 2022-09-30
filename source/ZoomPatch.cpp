@@ -15,8 +15,8 @@
  * memory values 
  */
 
-/* DNG Base game (11757) */
-namespace Base { 
+/* DNG Base game (11757) GOG */
+namespace Base_GOG { 
 
     memoryPTR maxZoom = {
         0x002BD4E8,
@@ -100,6 +100,37 @@ namespace Addon {
 
     DWORD lobbyVersionFilterAddr = 0x00; // unknown
     DWORD gameVersionAddr = 0x2D2DB8;
+
+
+    PatchData patchData = {
+        worldObject,
+        maxZoom,
+        currZoom,
+        lobbyVersionFilterAddr,
+        gameVersionAddr
+    };
+}
+
+/* DNG Wikinger Addon (11758) Gold Edition */
+namespace Addon_Gold {
+
+    memoryPTR maxZoom = {
+        0x002C2BA8,
+        { 0x4C, 0x1BC }
+    };
+
+    memoryPTR currZoom = {
+        0x002C2BA8,
+        { 0x4C, 0x1B8 }
+    };
+
+    memoryPTR worldObject = {
+        0x002C2BA8,
+        { 0x4C }
+    };
+
+    DWORD lobbyVersionFilterAddr = 0x00; // unknown
+    DWORD gameVersionAddr = 0x2CB438;
 
 
     PatchData patchData = {
@@ -356,19 +387,20 @@ int prepare(CameraData* cData) {
     Sleep(4000);
 
     /* check if gameVersion is supported */
-    char* sBase = (char*)calcAddress(Base::gameVersionAddr);
+    char* sBase = (char*)calcAddress(Base_GOG::gameVersionAddr);
     char* sBaseGold = (char*)calcAddress(Base_Gold::gameVersionAddr);
     char* sAddon = (char*)calcAddress(Addon::gameVersionAddr);
+    char* sAddonGold = (char*)calcAddress(Addon_Gold::gameVersionAddr);
     bool bSupported = false;
 
     for (int i = 0; i < retryCount; i++) {
 
-        if (checkSettlersII(sBase) || checkSettlersII(sBaseGold) || checkSettlersII(sAddon)) {
+        if (checkSettlersII(sBase) || checkSettlersII(sBaseGold) || checkSettlersII(sAddon) || checkSettlersII(sAddonGold)) {
             if (checkSettlersVersion(sBase)) {
-                showMessage("Found Base version.");
+                showMessage("Found Base GOG version.");
                 bSupported = true;
 
-                return ZoomPatch(Base::patchData, cData).run();
+                return ZoomPatch(Base_GOG::patchData, cData).run();
             }
             else if (checkSettlersVersion(sBaseGold)) {
                 showMessage("Found Base Gold Edition version.");
@@ -382,14 +414,22 @@ int prepare(CameraData* cData) {
 
                 return ZoomPatch(Addon::patchData, cData).run();
             }
+            else if (checkSettlersVersion(sAddonGold)) {
+                showMessage("Found Addon Gold Edition.");
+                bSupported = true;
+
+                return ZoomPatch(Addon_Gold::patchData, cData).run();
+            }
         }
 
         showMessage("retrying...");
         Sleep(retryTimeout);
     }
 
-    if (!bSupported)
+    if (!bSupported) {
         showMessage("This game version is not supported!");
+        MessageBoxA(NULL, "This game version is not supported!", "Widescreen Fix ERROR", MB_OK);
+    }
 
     return 0;
 }
