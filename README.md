@@ -23,7 +23,6 @@ you can also just compile it from source ;)
 - Retail CD Gold Edition (11757 and 11758) + official noCD patches
 	- `s2dng.exe` SHA256 `3bc844be08d3c15ccf40c0b3dc1ff19a858c01ac48738a441033b352cb1217f1`
 	- `s2dng_addon.exe` SHA256 `091944faf932c30825fb4920d71247c427e75a497ce01fe2540ad8595f655ef9`
-	- `s2dngeditor.exe` SHA256 `602415cf6ae86e100d238cf098652ca0527a0a5b8fdfb0872dba2be84a56ac65`
 
 **NOTE: CD versions with the original exe are not tested and will not work!**
 
