@@ -47,6 +47,39 @@ namespace Base {
 
 }
 
+/* DNG Base game (11757) Gold Edition */
+namespace Base_Gold {
+
+    memoryPTR maxZoom = {
+        0x002B5B48,
+        { 0x4C, 0x1A8 }
+    };
+
+    memoryPTR currZoom = {
+        0x002B5B48,
+        { 0x4C, 0x1A4 }
+    };
+
+    memoryPTR worldObject = {
+        0x002B5B48,
+        { 0x4C }
+    };
+
+    DWORD lobbyVersionFilterAddr = 0x00; // unknown
+    DWORD gameVersionAddr = 0x2BE090;
+
+
+    PatchData patchData = {
+        worldObject,
+        maxZoom,
+        currZoom,
+        lobbyVersionFilterAddr,
+        gameVersionAddr
+    };
+
+}
+
+
 /* DNG Wikinger Addon (11758) */
 namespace Addon {
 
@@ -324,17 +357,24 @@ int prepare(CameraData* cData) {
 
     /* check if gameVersion is supported */
     char* sBase = (char*)calcAddress(Base::gameVersionAddr);
+    char* sBaseGold = (char*)calcAddress(Base_Gold::gameVersionAddr);
     char* sAddon = (char*)calcAddress(Addon::gameVersionAddr);
     bool bSupported = false;
 
     for (int i = 0; i < retryCount; i++) {
 
-        if (checkSettlersII(sBase) || checkSettlersII(sAddon)) {
+        if (checkSettlersII(sBase) || checkSettlersII(sBaseGold) || checkSettlersII(sAddon)) {
             if (checkSettlersVersion(sBase)) {
                 showMessage("Found Base version.");
                 bSupported = true;
 
                 return ZoomPatch(Base::patchData, cData).run();
+            }
+            else if (checkSettlersVersion(sBaseGold)) {
+                showMessage("Found Base Gold Edition version.");
+                bSupported = true;
+
+                return ZoomPatch(Base_Gold::patchData, cData).run();
             }
             else if (checkSettlersVersion(sAddon)) {
                 showMessage("Found Addon version.");
