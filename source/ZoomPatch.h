@@ -29,7 +29,7 @@ struct PatchData {
 };
 
 const int version_maj = 1;
-const int version_min = 5;
+const int version_min = 6;
 
 const int retryCount = 4;
 const int retryTimeout = 2000;
