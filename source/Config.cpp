@@ -23,7 +23,19 @@ CameraData* loadCameraSettings(CSimpleIni& ini) {
 	auto* cData = new CameraData;
 
 	cData->bEnabled = ini.GetBoolValue("Camera", "enabled", true);
-	cData->fZoomIncrement = (float) ini.GetDoubleValue("Camera", "ZoomPatchStep", 1.0f);
+
+	int zoomIncr = ini.GetLongValue("Camera", "ZoomPatchStep", 1);
+	switch (zoomIncr) {
+	case 2:
+		cData->fZoomIncrement = 0.5f;
+		break;
+	case 3:
+		cData->fZoomIncrement = 0.25f;
+		break;
+	default:
+		cData->fZoomIncrement = 1.0f;
+	}
+
 	cData->bWideView = ini.GetBoolValue("Camera", "WideViewMode", true);
 	cData->bDebugMode = ini.GetBoolValue("Camera", "DebugMode");
 

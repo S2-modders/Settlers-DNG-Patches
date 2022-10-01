@@ -26,6 +26,8 @@ struct PatchData {
     memoryPTR currZoom;
     DWORD lobbyVersionFilterAddr;
     DWORD gameVersionAddr;
+    DWORD zoomIncrAddr;
+    DWORD zoomDecrAddr;
 };
 
 const int version_maj = 1;

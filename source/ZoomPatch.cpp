@@ -36,13 +36,17 @@ namespace Base_GOG {
     DWORD lobbyVersionFilterAddr = 0x107055;
     DWORD gameVersionAddr = 0x2C5A30;
 
+    DWORD zoomIncrAddr = 0x20D00E + 0x2;
+    DWORD zoomDecrAddr = 0x20CFE4 + 0x2;
 
     PatchData patchData = {
         worldObject,
         maxZoom,
         currZoom,
         lobbyVersionFilterAddr,
-        gameVersionAddr
+        gameVersionAddr,
+        zoomIncrAddr,
+        zoomDecrAddr
     };
 
 }
@@ -68,13 +72,17 @@ namespace Base_Gold {
     DWORD lobbyVersionFilterAddr = 0x00; // unknown
     DWORD gameVersionAddr = 0x2BE090;
 
+    DWORD zoomIncrAddr = 0x20CCDE + 0x2;
+    DWORD zoomDecrAddr = 0x20CCB4 + 0x2;
 
     PatchData patchData = {
         worldObject,
         maxZoom,
         currZoom,
         lobbyVersionFilterAddr,
-        gameVersionAddr
+        gameVersionAddr,
+        zoomIncrAddr,
+        zoomDecrAddr
     };
 
 }
@@ -101,13 +109,17 @@ namespace Addon {
     DWORD lobbyVersionFilterAddr = 0x00; // unknown
     DWORD gameVersionAddr = 0x2D2DB8;
 
+    DWORD zoomIncrAddr = 0x218568 + 0x2;
+    DWORD zoomDecrAddr = 0x21853E + 0x2;
 
     PatchData patchData = {
         worldObject,
         maxZoom,
         currZoom,
         lobbyVersionFilterAddr,
-        gameVersionAddr
+        gameVersionAddr,
+        zoomIncrAddr,
+        zoomDecrAddr
     };
 }
 
@@ -132,13 +144,17 @@ namespace Addon_Gold {
     DWORD lobbyVersionFilterAddr = 0x00; // unknown
     DWORD gameVersionAddr = 0x2CB438;
 
+    DWORD zoomIncrAddr = 0x2182C8 + 0x2;
+    DWORD zoomDecrAddr = 0x21829E + 0x2;
 
     PatchData patchData = {
         worldObject,
         maxZoom,
         currZoom,
         lobbyVersionFilterAddr,
-        gameVersionAddr
+        gameVersionAddr,
+        zoomIncrAddr,
+        zoomDecrAddr
     };
 }
 
@@ -151,6 +167,7 @@ public:
 
     explicit ZoomPatch(PatchData& patchData, CameraData* cameraData) : patchData(patchData) {
         this->cameraData = cameraData;
+        this->zoomStep_p = &cameraData->fZoomIncrement;
     }
 
     int run() {
@@ -162,7 +179,6 @@ public:
         for (;; Sleep(1000)) {
             worldObj = (float*)tracePointer(&patchData.worldObject);
             patchZoom();
-            //setZoomIncrement();
 
             doDebug();
         }
@@ -181,6 +197,7 @@ private:
     
     float* worldObj;
     float* maxZoom;
+    float* zoomStep_p;
 
     int hor, ver;
     float newZoomValue = 4.0f; // 4 is the default zoom value
@@ -209,6 +226,8 @@ private:
                 showMessage("WideView disabled");
 
             *maxZoom = newZoomValue;
+
+            patchZoomIncrement();
         }
     }
 
@@ -223,26 +242,11 @@ private:
         writeBytes(filter, &jne, 2);
     }
 
-    void setZoomIncrement() {
-        //float* zoomStep_p = &tData->fZoomIncrement;
+    void patchZoomIncrement() {
+        writeBytes(calcAddress(patchData.zoomIncrAddr), &zoomStep_p, 4);
+        writeBytes(calcAddress(patchData.zoomDecrAddr), &zoomStep_p, 4);
 
-        /*
-        memoryPTR zoomIncr = {
-            0x20D00E + 0x02,
-            { 0x0 }
-        };
-        memoryPTR zoomDecr = {
-            0x20CFE4 + 0x02,
-            { 0x0 }
-        };
-
-        DWORD tmp[4];
-        readBytes(tracePointer(&zoomIncr), tmp, 4);
-        std::cout << "ZoomStep " << tData->ZoomIncrement << "\n";
-        std::cout << "ZoomStep " << &tData->ZoomIncrement << "\n";
-        writeBytes(tracePointer(&zoomIncr), &zoomStep_p, 4);
-        writeBytes(tracePointer(&zoomDecr), &zoomStep_p, 4);
-        */
+        showMessage("Zoom step set");
     }
 
     bool calcZoomValue() {
