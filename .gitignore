@@ -1,4 +1,5 @@
 .directory
+.idea
 premake*
 VersionInfo*
 frps*
@@ -13,3 +14,4 @@ _*
 *.lib
 
 build/
+cmake*/
