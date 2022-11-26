@@ -11,6 +11,8 @@
 
 #include "SimpleIni/SimpleIni.h"
 
+#include <sstream>
+
 /*************************
 Edit Values
 *************************/
@@ -20,8 +22,14 @@ float fFPSLimit;
 
 HRESULT f_IDirect3DDevice9::Present(CONST RECT *pSourceRect, CONST RECT *pDestRect, HWND hDestWindowOverride, CONST RGNDATA *pDirtyRegion)
 {
-    for (int i = 0; i < 16; i++) {
-        SetSamplerState(i, D3DSAMP_MAXANISOTROPY, 16);
+    for (int i = 0; i <= 7; i++) {
+        //SetSamplerState(i, D3DSAMP_MIPFILTER, D3DTEXF_ANISOTROPIC);
+
+        //SetSamplerState(i, D3DSAMP_MAGFILTER, D3DTEXF_ANISOTROPIC);
+        SetSamplerState(i, D3DSAMP_MINFILTER, D3DTEXF_ANISOTROPIC);
+        //SetSamplerState(i, D3DSAMP_MIPFILTER, D3DTEXF_LINEAR);
+
+        //SetSamplerState(i, D3DSAMP_MAXANISOTROPY, 16);
     }
 
     if (bFPSLimit)
@@ -974,9 +982,43 @@ HRESULT f_IDirect3DDevice9::GetSamplerState(THIS_ DWORD Sampler, D3DSAMPLERSTATE
     return f_pD3DDevice->GetSamplerState(Sampler, Type, pValue);
 }
 
+const int maxAnisotropy = 16;
 HRESULT f_IDirect3DDevice9::SetSamplerState(THIS_ DWORD Sampler, D3DSAMPLERSTATETYPE Type, DWORD Value)
 {
+    if (Type == D3DSAMP_MAXANISOTROPY) {
+        return f_pD3DDevice->SetSamplerState(Sampler, Type, maxAnisotropy);
+
+    } else if (Value == D3DTEXF_LINEAR) {
+        f_pD3DDevice->SetSamplerState(Sampler, D3DSAMP_MAXANISOTROPY, maxAnisotropy);
+
+        return f_pD3DDevice->SetSamplerState(Sampler, Type, D3DTEXF_ANISOTROPIC);
+    }
+
     return f_pD3DDevice->SetSamplerState(Sampler, Type, Value);
+
+    /*
+    // Setup Anisotropy Filtering
+    if (isoTropyFlag && (Type == D3DSAMP_MAXANISOTROPY || ((Type == D3DSAMP_MINFILTER || Type == D3DSAMP_MAGFILTER) && Value == D3DTEXF_LINEAR))) {
+        isoTropyFlag = false;
+        f_pD3DDevice->SetSamplerState(Sampler, D3DSAMP_MAXANISOTROPY, maxAnisotropy);
+    }
+
+    // Enable Anisotropic Filtering
+    if (Type == D3DSAMP_MAXANISOTROPY) {
+        if (f_pD3DDevice->SetSamplerState(Sampler, D3DSAMP_MAXANISOTROPY, maxAnisotropy) == D3D_OK) {
+            return D3D_OK;
+        }
+    } else if ((Type == D3DSAMP_MINFILTER || Type == D3DSAMP_MAGFILTER) && Value == D3DTEXF_LINEAR) {
+        if (f_pD3DDevice->SetSamplerState(Sampler, D3DSAMP_MAXANISOTROPY, maxAnisotropy) == D3D_OK
+            && f_pD3DDevice->SetSamplerState(Sampler, Type, D3DTEXF_ANISOTROPIC) == D3D_OK) {
+            return D3D_OK;
+        }
+    }
+    
+
+    if (Type == D3DSAMP_MAXANISOTROPY || ((Type == D3DSAMP_MINFILTER || Type == D3DSAMP_MAGFILTER) && Value == D3DTEXF_LINEAR)) {
+    }
+    */
 }
 
 HRESULT f_IDirect3DDevice9::SetDepthStencilSurface(THIS_ IDirect3DSurface9* pNewZStencil)
