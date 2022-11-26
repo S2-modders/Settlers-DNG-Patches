@@ -1,6 +1,8 @@
 .directory
 premake*
 VersionInfo*
+frps*
+frpc*
 
 *.yml
 *.zip
