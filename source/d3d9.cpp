@@ -22,16 +22,6 @@ float fFPSLimit;
 
 HRESULT f_IDirect3DDevice9::Present(CONST RECT *pSourceRect, CONST RECT *pDestRect, HWND hDestWindowOverride, CONST RGNDATA *pDirtyRegion)
 {
-    for (int i = 0; i <= 7; i++) {
-        //SetSamplerState(i, D3DSAMP_MIPFILTER, D3DTEXF_ANISOTROPIC);
-
-        //SetSamplerState(i, D3DSAMP_MAGFILTER, D3DTEXF_ANISOTROPIC);
-        SetSamplerState(i, D3DSAMP_MINFILTER, D3DTEXF_ANISOTROPIC);
-        //SetSamplerState(i, D3DSAMP_MIPFILTER, D3DTEXF_LINEAR);
-
-        //SetSamplerState(i, D3DSAMP_MAXANISOTROPY, 16);
-    }
-
     if (bFPSLimit)
     {
         static LARGE_INTEGER PerformanceCount1;
@@ -982,9 +972,16 @@ HRESULT f_IDirect3DDevice9::GetSamplerState(THIS_ DWORD Sampler, D3DSAMPLERSTATE
     return f_pD3DDevice->GetSamplerState(Sampler, Type, pValue);
 }
 
-const int maxAnisotropy = 16;
 HRESULT f_IDirect3DDevice9::SetSamplerState(THIS_ DWORD Sampler, D3DSAMPLERSTATETYPE Type, DWORD Value)
 {
+    const int maxAnisotropy = 16;
+
+    if (Type == D3DSAMP_MAXANISOTROPY)
+        return f_pD3DDevice->SetSamplerState(Sampler, Type, maxAnisotropy);
+    else
+        return f_pD3DDevice->SetSamplerState(Sampler, Type, Value);
+
+    /*
     if (Type == D3DSAMP_MAXANISOTROPY) {
         return f_pD3DDevice->SetSamplerState(Sampler, Type, maxAnisotropy);
 
@@ -995,7 +992,7 @@ HRESULT f_IDirect3DDevice9::SetSamplerState(THIS_ DWORD Sampler, D3DSAMPLERSTATE
     }
 
     return f_pD3DDevice->SetSamplerState(Sampler, Type, Value);
-
+    */
     /*
     // Setup Anisotropy Filtering
     if (isoTropyFlag && (Type == D3DSAMP_MAXANISOTROPY || ((Type == D3DSAMP_MINFILTER || Type == D3DSAMP_MAGFILTER) && Value == D3DTEXF_LINEAR))) {
