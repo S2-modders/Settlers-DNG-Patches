@@ -3,6 +3,7 @@ premake*
 VersionInfo*
 frps*
 frpc*
+_*
 
 *.yml
 *.zip
@@ -10,7 +11,11 @@ frpc*
 *.pdb
 *.exp
 *.lib
+*.sln
 
 data/frpc*
 
+*.vcxproj*
+
+.vs/
 build/
