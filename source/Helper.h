@@ -1,5 +1,5 @@
 #pragma once
-#include <Windows.h>
+#include <windows.h>
 #include "ZoomPatch.h"
 
 void protectedRead(void* dest, void* src, int n);
@@ -15,6 +15,7 @@ DWORD* tracePointer(memoryPTR* patch);
 bool functionInjector(void* toHook, void* function, int len);
 
 void showMessage(float val);
+void showMessage(long val);
 void showMessage(int val);
 void showMessage(short val);
 void showMessage(char* val);

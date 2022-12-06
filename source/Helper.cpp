@@ -5,7 +5,6 @@
  *
  */
 
-#include <Windows.h>
 #include <iostream>
 #include <sstream>
 #include "ZoomPatch.h"
@@ -86,6 +85,10 @@ void showMessage(float val) {
     std::stringstream ss;
     ss << "Debug: " << val;
     MessageBoxA(NULL, (LPCSTR)ss.str().c_str(), "ZoomPatch by zocker_160", MB_OK);
+}
+void showMessage(long val) {
+    std::cout << "DEBUG: " << val << "\n";
+    return;
 }
 void showMessage(int val) {
     std::cout << "DEBUG: " << val << "\n";

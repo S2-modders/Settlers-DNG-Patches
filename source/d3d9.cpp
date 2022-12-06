@@ -193,6 +193,7 @@ struct IDirect3DShaderValidator9* WINAPI f_Direct3DShaderValidatorCreate9()
 {
     return d3d9.Direct3DShaderValidatorCreate9();
 }
+
 VOID WINAPI f_PSGPError(class D3DFE_PROCESSVERTICES* a, enum PSGPERRORID b, unsigned int c)
 {
     return d3d9.PSGPError(a, b, c);

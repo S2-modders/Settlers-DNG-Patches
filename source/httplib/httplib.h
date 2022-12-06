@@ -8,6 +8,11 @@
 #ifndef CPPHTTPLIB_HTTPLIB_H
 #define CPPHTTPLIB_HTTPLIB_H
 
+// see https://github.com/meganz/mingw-std-threads
+#include "mingw.thread.h"
+#include "mingw.mutex.h"
+#include "mingw.condition_variable.h"
+
 /*
  * Configuration
  */

@@ -6,7 +6,6 @@
  */
 
 #define WIN32_LEAN_AND_MEAN
-#include <Windows.h>
 #include <stdlib.h>
 #include <sstream>
 #include <thread>
@@ -105,17 +104,19 @@ void createTCPBridge() {
 	showMessage("End injected function");
 }
 
+// uhh https://gcc.gnu.org/onlinedocs/gcc/x86-Function-Attributes.html
+
 DWORD jmpBackAddr;
 DWORD portStrAddr = (DWORD)getMatchmakingAddress() + 0xA7EC;
 void __declspec(naked) jumperFunction() {
-	createTCPBridge();
-	__asm {
+	//createTCPBridge();
+	__asm (
 		//mov edx, [eax+0x2C]
-		mov edx, [bridgePort]
-		push edx
-		push [portStrAddr]
-		jmp [jmpBackAddr]
-	}
+		"mov edx, [bridgePort];"
+        "push edx;"
+        "push [portStrAddr];"
+        "jmp [jmpBackAddr];"
+    );
 }
 
 void setTincatDebugMode() {
@@ -168,7 +169,7 @@ int LobbyPatch(lobbyThreadData* tData) {
 		DWORD hookAddr = (DWORD)getMatchmakingAddress() + CreateGamePayloadPortHook;
 		jmpBackAddr = hookAddr + hookLength;
 
-		functionInjector((DWORD*)hookAddr, jumperFunction, hookLength);
+		functionInjector((DWORD*)hookAddr, (void*)jumperFunction, hookLength);
 	}
 
 	return 0;

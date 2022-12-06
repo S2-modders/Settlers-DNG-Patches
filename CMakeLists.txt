@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.23)
+cmake_minimum_required(VERSION 3.22)
 project(d3d9)
 
 set(CMAKE_CXX_STANDARD 11)
@@ -30,5 +30,8 @@ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -s -static -Os -Wl,-subsystem,windows ${SHAR
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -s -static -Os -Wl,-subsystem,windows ${SHARED_OPT}")
 
 add_library(${PROJECT_NAME} SHARED
-        d3d9.cpp d3d9.h d3d9.def
-        ZoomPatch.cpp ZoomPatch.h)
+        source/d3d9.cpp source/d3d9.def
+        source/Helper.cpp
+        source/Lobby.cpp
+        source/ZoomPatch.cpp
+        source/SimpleIni/ConvertUTF.c)
