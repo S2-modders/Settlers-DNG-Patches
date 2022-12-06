@@ -63,7 +63,7 @@ void createTCPBridge() {
 
 	GetCurrentDirectoryA(MAX_PATH, iniPath);
 
-	strncpy(exePath, iniPath, MAX_PATH);
+	strncpy_s(exePath, iniPath, MAX_PATH);
 	strcat_s(iniPath, "\\bin\\frpc.ini");
 	strcat_s(exePath, "\\bin\\frpc.exe");
 
