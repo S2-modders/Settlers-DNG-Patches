@@ -6,29 +6,6 @@
  */
 #pragma once
 #include <Windows.h>
-#include <vector>
-
-struct memoryPTR {
-    DWORD base_address;
-    std::vector<int> offsets;
-};
-
-struct CameraData {
-    bool bEnabled;
-    bool bDebugMode;
-    bool bWideView;
-    float fZoomIncrement;
-};
-
-struct PatchData {
-    memoryPTR worldObject;
-    memoryPTR maxZoom;
-    memoryPTR currZoom;
-    DWORD lobbyVersionFilterAddr;
-    DWORD gameVersionAddr;
-    DWORD zoomIncrAddr;
-    DWORD zoomDecrAddr;
-};
 
 const int version_maj = 1;
 const int version_min = 6;

@@ -1,6 +1,11 @@
 #pragma once
 #include <Windows.h>
-#include "ZoomPatch.h"
+#include <vector>
+
+struct memoryPTR {
+    DWORD base_address;
+    std::vector<int> offsets;
+};
 
 void protectedRead(void* dest, void* src, int n);
 bool readBytes(void* read_addr, void* read_buffer, int len);

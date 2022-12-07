@@ -211,7 +211,7 @@ void patchEngineIni(bool state) {
     ini.SaveFile(iniPath);
 }
 
-CSimpleIni config;
+CSimpleIniA config;
 
 /*************************
 DllMain

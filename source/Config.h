@@ -5,8 +5,7 @@
  */
 
 #pragma once
-#include "ZoomPatch.h"
-#include "Lobby.h"
+#include "Helper.h"
 #include "SimpleIni/SimpleIni.h"
 
 struct EngineData {
@@ -15,6 +14,23 @@ struct EngineData {
 	bool bWindowed;
 	int refreshRate;
 	int fpsLimit;
+};
+
+struct CameraData {
+    bool bEnabled;
+    bool bDebugMode;
+    bool bWideView;
+    float fZoomIncrement;
+};
+
+struct PatchData {
+    memoryPTR worldObject;
+    memoryPTR maxZoom;
+    memoryPTR currZoom;
+    DWORD lobbyVersionFilterAddr;
+    DWORD gameVersionAddr;
+    DWORD zoomIncrAddr;
+    DWORD zoomDecrAddr;
 };
 
 EngineData* loadEngineSettings(CSimpleIni& ini);
