@@ -5,7 +5,7 @@
  */
 
 #pragma once
-#include "Helper.h"
+#include "Helper/Helper.h"
 #include "SimpleIni/SimpleIni.h"
 
 #include <sstream>

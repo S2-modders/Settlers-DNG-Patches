@@ -7,7 +7,7 @@
 
 #include "d3d9.h"
 
-#include "Helper.h"
+#include "Helper/Helper.h"
 
 //#include "Lobby.h"
 #include "Config.h"
@@ -230,10 +230,8 @@ bool WINAPI DllMain(HMODULE hModule, DWORD fdwReason, LPVOID lpReserved) {
         config.LoadFile(path);
 
         EngineData* engineData = loadEngineSettings(config);
-
         CameraData* cameraData = loadCameraSettings(config);
         cameraData->bDebugMode = engineData->bDebugMode;
-
         LobbyData* lobbyData = loadLobbySettings(config);
 
         if (engineData->bDebugMode) {
