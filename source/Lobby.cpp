@@ -5,15 +5,7 @@
  *
  */
 
-#define WIN32_LEAN_AND_MEAN
-#include <Windows.h>
-#include <stdlib.h>
-#include <sstream>
-#include <thread>
-#include "Helper.h"
 #include "Lobby.h"
-#include "SimpleIni/SimpleIni.h"
-#include "httplib/httplib.h"
 
 STARTUPINFO si;
 PROCESS_INFORMATION bridgeProcessInfo;

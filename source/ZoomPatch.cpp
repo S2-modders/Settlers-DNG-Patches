@@ -5,11 +5,7 @@
  *
  */
 
-#include <Windows.h>
-#include <sstream>
-#include <iostream>
 #include "ZoomPatch.h"
-#include "Helper.h"
 
 /* 
  * memory values 
@@ -161,184 +157,171 @@ namespace Addon_Gold {
 /*###################################*/
 
 
-class ZoomPatch {
 
-public:
 
-    explicit ZoomPatch(PatchData& patchData, CameraData* cameraData) : patchData(patchData) {
-        this->cameraData = cameraData;
-        this->zoomStep_p = &cameraData->fZoomIncrement;
+ZoomPatch::ZoomPatch(PatchData& patchData, CameraData* cameraData) : patchData(patchData) {
+    this->cameraData = cameraData;
+    this->zoomStep_p = &cameraData->fZoomIncrement;
+}
+
+void ZoomPatch::startupMessage() {
+    std::cout << "ZoomPatch & LobbyPatch by zocker_160 - Version: v" << version_maj << "." << version_min << "\n";
+    std::cout << "Debug mode enabled!\n";
+    std::cout << "Waiting for application startup...\n";
+}
+
+int ZoomPatch::run() {
+    if (!isWorldObject())
+        return 0;
+
+    // delete temporary VK config file
+    remove(cameraData->VkConfigPath);
+
+    //patchLobbyFilter();
+
+    for (;; Sleep(1000)) {
+        worldObj = (float*)tracePointer(&patchData.worldObject);
+        patchZoom();
+
+        doDebug();
     }
+}
 
-    int run() {
-        if (!isWorldObject())
-            return 0;
 
-        //patchLobbyFilter();
+bool ZoomPatch::isWorldObject() {
+    float* tmp = (float*)calcAddress(patchData.worldObject.base_address);
 
-        for (;; Sleep(1000)) {
-            worldObj = (float*)tracePointer(&patchData.worldObject);
-            patchZoom();
-
-            doDebug();
-        }
+    if (*tmp < 0) {
+        showMessage("WorldObject does not exist!");
+        return false;
     }
+    else
+        return true;
+}
 
-    static void startupMessage() {
-        std::cout << "ZoomPatch & LobbyPatch by zocker_160 - Version: v" << version_maj << "." << version_min << "\n";
-        std::cout << "Debug mode enabled!\n";
-        std::cout << "Waiting for application startup...\n";
-    }
+void ZoomPatch::patchZoom() {
+    if (*worldObj == 0)
+        return;
 
-private:
-
-    PatchData& patchData;
-    CameraData* cameraData;
-    
-    float* worldObj;
-    float* maxZoom;
-    float* zoomStep_p;
-
-    int hor, ver;
-    float newZoomValue = 4.0f; // 4 is the default zoom value
-
-
-    bool isWorldObject() {
-        float* tmp = (float*)calcAddress(patchData.worldObject.base_address);
-
-        if (*tmp < 0) {
-            showMessage("WorldObject does not exist!");
-            return false;
-        }
+    maxZoom = (float*)tracePointer(&patchData.maxZoom);
+    if (calcZoomValue() && *maxZoom != newZoomValue) {
+        if (cameraData->bWideView)
+            showMessage("WideView enabled");
         else
-            return true;
+            showMessage("WideView disabled");
+
+        *maxZoom = newZoomValue;
+
+        patchZoomIncrement();
     }
+}
 
-    void patchZoom() {
-        if (*worldObj == 0)
-            return;
+void ZoomPatch::patchLobbyFilter() {
+    if (patchData.lobbyVersionFilterAddr == 0)
+        return;
 
-        maxZoom = (float*)tracePointer(&patchData.maxZoom);
-        if (calcZoomValue() && *maxZoom != newZoomValue) {
-            if (cameraData->bWideView)
-                showMessage("WideView enabled");
-            else
-                showMessage("WideView disabled");
+    showMessage("patching lobby version filter");
 
-            *maxZoom = newZoomValue;
+    short jne = 0x1E75;
+    short* filter = (short*)calcAddress(patchData.lobbyVersionFilterAddr);
+    writeBytes(filter, &jne, 2);
+}
 
-            patchZoomIncrement();
-        }
-    }
+void ZoomPatch::patchZoomIncrement() {
+    writeBytes(calcAddress(patchData.zoomIncrAddr), &zoomStep_p, 4);
+    writeBytes(calcAddress(patchData.zoomDecrAddr), &zoomStep_p, 4);
 
-    void patchLobbyFilter() {
-        if (patchData.lobbyVersionFilterAddr == 0)
-            return;
+    showMessage("Zoom step set");
+}
 
-        showMessage("patching lobby version filter");
+bool ZoomPatch::calcZoomValue() {
+    GetDesktopResolution2(hor, ver);
+    float aspr = calcAspectRatio(hor, ver);
 
-        short jne = 0x1E75;
-        short* filter = (short*)calcAddress(patchData.lobbyVersionFilterAddr);
-        writeBytes(filter, &jne, 2);
-    }
-
-    void patchZoomIncrement() {
-        writeBytes(calcAddress(patchData.zoomIncrAddr), &zoomStep_p, 4);
-        writeBytes(calcAddress(patchData.zoomDecrAddr), &zoomStep_p, 4);
-
-        showMessage("Zoom step set");
-    }
-
-    bool calcZoomValue() {
-        GetDesktopResolution2(hor, ver);
-        float aspr = calcAspectRatio(hor, ver);
-
-        if (aspr > 0.0f && aspr <= 20.0f) {
-            /* maxZoomValue will be set depending on the aspect ratio of the screen */
-            if (cameraData->bWideView) {
-                if (aspr < 1.5f) {
-                    newZoomValue = 6.0f;
-                    return true;
-                }
-                else if (aspr < 1.9f) {
-                    newZoomValue = 7.0f;
-                    return true;
-                }
-                else if (aspr < 2.6f) {
-                    newZoomValue = 8.0f;
-                    return true;
-                }
-                else if (aspr >= 2.6f) {
-                    newZoomValue = 9.0f;
-                    return true;
-                }
-                else {
-                    return false;
-                }
+    if (aspr > 0.0f && aspr <= 20.0f) {
+        /* maxZoomValue will be set depending on the aspect ratio of the screen */
+        if (cameraData->bWideView) {
+            if (aspr < 1.5f) {
+                newZoomValue = 6.0f;
+                return true;
+            }
+            else if (aspr < 1.9f) {
+                newZoomValue = 7.0f;
+                return true;
+            }
+            else if (aspr < 2.6f) {
+                newZoomValue = 8.0f;
+                return true;
+            }
+            else if (aspr >= 2.6f) {
+                newZoomValue = 9.0f;
+                return true;
             }
             else {
-                if (aspr < 1.5f) {
-                    newZoomValue = 4.0f;
-                    return true;
-                }
-                else if (aspr < 1.9f) {
-                    newZoomValue = 5.0f;
-                    return true;
-                }
-                else if (aspr < 2.2f) {
-                    newZoomValue = 6.0f;
-                    return true;
-                }
-                else if (aspr < 2.6f) {
-                    newZoomValue = 7.0f;
-                    return true;
-                }
-                else if (aspr >= 2.6f) {
-                    newZoomValue = 7.0f;
-                    return true;
-                }
-                else {
-                    return false;
-                }
+                return false;
             }
-
-            return true;
         }
         else {
-            return false;
-        }
-    }
-
-    void doDebug() {
-        if (!cameraData->bDebugMode)
-            return;
-
-        if (IsKeyPressed(VK_F3)) {
-            int t_hor = 0;
-            int t_ver = 0;
-            GetDesktopResolution2(t_hor, t_ver);
-            std::stringstream ss;
-            ss << "DEBUG:  xRes: " << t_hor << " yRes: " << t_ver;
-            ss << " ASPR: " << calcAspectRatio(t_hor, t_ver);
-            ss << " MaxZoomValue: " << newZoomValue;
-            std::cout << ss.str() << "\n";
-            //MessageBoxA(NULL, (LPCSTR)ss.str().c_str(), "ZoomPatch by zocker_160", MB_OK);
-        }
-        if (IsKeyPressed(VK_F6)) {
-            if (*worldObj != 0) {
-                //*(float*)(tracePointer(&CurrZoomPTR)) += 1.0f;
-                showMessage(*(float*)(tracePointer(&patchData.maxZoom)));
+            if (aspr < 1.5f) {
+                newZoomValue = 4.0f;
+                return true;
+            }
+            else if (aspr < 1.9f) {
+                newZoomValue = 5.0f;
+                return true;
+            }
+            else if (aspr < 2.2f) {
+                newZoomValue = 6.0f;
+                return true;
+            }
+            else if (aspr < 2.6f) {
+                newZoomValue = 7.0f;
+                return true;
+            }
+            else if (aspr >= 2.6f) {
+                newZoomValue = 7.0f;
+                return true;
+            }
+            else {
+                return false;
             }
         }
-        if (IsKeyPressed(VK_F7)) {
-            showMessage(*(float*)(tracePointer(&patchData.currZoom)));
-        }
-        if (IsKeyPressed(VK_F8)) {
-            std::cout << "World address: " << worldObj << " World value: " << *worldObj << "\n";
+
+        return true;
+    }
+    else {
+        return false;
+    }
+}
+
+void ZoomPatch::doDebug() {
+    if (!cameraData->bDebugMode)
+        return;
+
+    if (IsKeyPressed(VK_F3)) {
+        int t_hor = 0;
+        int t_ver = 0;
+        GetDesktopResolution2(t_hor, t_ver);
+        std::stringstream ss;
+        ss << "DEBUG:  xRes: " << t_hor << " yRes: " << t_ver;
+        ss << " ASPR: " << calcAspectRatio(t_hor, t_ver);
+        ss << " MaxZoomValue: " << newZoomValue;
+        std::cout << ss.str() << "\n";
+        //MessageBoxA(NULL, (LPCSTR)ss.str().c_str(), "ZoomPatch by zocker_160", MB_OK);
+    }
+    if (IsKeyPressed(VK_F6)) {
+        if (*worldObj != 0) {
+            //*(float*)(tracePointer(&CurrZoomPTR)) += 1.0f;
+            showMessage(*(float*)(tracePointer(&patchData.maxZoom)));
         }
     }
-
-};
+    if (IsKeyPressed(VK_F7)) {
+        showMessage(*(float*)(tracePointer(&patchData.currZoom)));
+    }
+    if (IsKeyPressed(VK_F8)) {
+        std::cout << "World address: " << worldObj << " World value: " << *worldObj << "\n";
+    }
+}
 
 
 bool checkSettlersII(char* versionString) {
@@ -379,14 +362,6 @@ bool checkSettlersVersion(char* versionString) {
 
 
 int prepare(CameraData* cData) {
-    FILE* f;
-
-    if (cData->bDebugMode) {
-        AllocConsole();
-        freopen_s(&f, "CONOUT$", "w", stdout);
-        ZoomPatch::startupMessage();
-    }
-
     /* wait a bit for the application to start up (might crash otherwise) */
     Sleep(4000);
 
@@ -432,7 +407,7 @@ int prepare(CameraData* cData) {
 
     if (!bSupported) {
         showMessage("This game version is not supported!");
-        MessageBoxA(NULL, "This game version is not supported!", "Widescreen Fix ERROR", MB_OK);
+        //MessageBoxA(NULL, "This game version is not supported!", "Widescreen Fix ERROR", MB_OK);
     }
 
     return 0;

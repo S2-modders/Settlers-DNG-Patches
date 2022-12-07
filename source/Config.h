@@ -8,19 +8,37 @@
 #include "Helper.h"
 #include "SimpleIni/SimpleIni.h"
 
+#include <sstream>
+#include <fstream>
+
 struct EngineData {
 	bool bHardwareCursor;
 	bool bVSync;
-	bool bWindowed;
+    bool bNativeDX;
+    bool bDebugMode;
 	int refreshRate;
 	int fpsLimit;
+    int MSAA;
+    int Anisotropy;
+};
+
+struct ServerAddr {
+    char* IP;
+    int Port;
+};
+
+struct NetworkData {
+    int gamePort;
+    ServerAddr serverAddr;
+    int patchLevel;
 };
 
 struct CameraData {
     bool bEnabled;
-    bool bDebugMode;
     bool bWideView;
+    bool bDebugMode;
     float fZoomIncrement;
+    char VkConfigPath[MAX_PATH];
 };
 
 struct PatchData {
@@ -33,8 +51,21 @@ struct PatchData {
     DWORD zoomDecrAddr;
 };
 
+struct LobbyData {
+    bool bEnabled;
+    bool bTincatDebug;
+    bool bNetworkPatch;
+    bool bDebugMode;
+    const char* serverIP;
+    int patchlevel;
+};
+
+
 EngineData* loadEngineSettings(CSimpleIni& ini);
 CameraData* loadCameraSettings(CSimpleIni& ini);
 LobbyData* loadLobbySettings(CSimpleIni& ini);
 
 void setEngineData(char* iniPath, EngineData* eData);
+void setNetworkData(char* iniPath, NetworkData* nData);
+
+void initDXconfig(char* path, EngineData* eData);

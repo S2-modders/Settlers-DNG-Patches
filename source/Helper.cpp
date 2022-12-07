@@ -5,10 +5,6 @@
  *
  */
 
-#include <Windows.h>
-#include <iostream>
-#include <sstream>
-#include "ZoomPatch.h"
 #include "Helper.h"
 
  // reading and writing stuff / helper functions and other crap
@@ -139,4 +135,17 @@ float calcAspectRatio(int horizontal, int vertical) {
 bool IsKeyPressed(int vKey) {
     /* some bitmask trickery because why not */
     return GetAsyncKeyState(vKey) & 0x8000;
+}
+
+bool isWine() {
+    HMODULE ntdllMod = GetModuleHandle("ntdll.dll");
+
+    return ntdllMod && GetProcAddress(ntdllMod, "wine_get_version");
+}
+
+void getGameDirectory(HMODULE hm, char* path, int size, char* loc) {
+    GetModuleFileName(hm, path, size);
+    *strrchr(path, '\\') = '\0';
+    *strrchr(path, '\\') = '\0';
+    strcat_s(path, size, loc);
 }

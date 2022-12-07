@@ -3,11 +3,15 @@
  *
  * This source code is licensed under GPL-v3
  */
+#define WIN32_LEAN_AND_MEAN
 
 #include "d3d9.h"
-#include "ZoomPatch.h"
-#include "Lobby.h"
+
+#include "Helper.h"
+
+//#include "Lobby.h"
 #include "Config.h"
+#include "ZoomPatch.h"
 
 #include "SimpleIni/SimpleIni.h"
 
@@ -194,28 +198,16 @@ VOID WINAPI f_PSGPSampleTexture(class D3DFE_PROCESSVERTICES* a, unsigned int b, 
 }
 
 /*************************
-ini patching
+Testing Ground
 *************************/
-void patchEngineIni(bool state) {
-    char iniPath[MAX_PATH];
-    GetCurrentDirectoryA(MAX_PATH, iniPath);
-    *strrchr(iniPath, '\\') = '\0';
-    strcat_s(iniPath, "\\data\\settings\\engine.ini");
-
-    //MessageBoxA(NULL, iniPath, "S2Patch by zocker_160", MB_OK);
-
-    CSimpleIniA ini;
-    ini.SetUnicode();
-    ini.LoadFile(iniPath);
-    ini.SetLongValue("Engine", "hardwareCursor", (long) !state);
-    ini.SaveFile(iniPath);
-}
-
-CSimpleIniA config;
 
 /*************************
 DllMain
 *************************/
+
+FILE* f;
+HMODULE hm = NULL;
+CSimpleIniA config;
 
 bool WINAPI DllMain(HMODULE hModule, DWORD fdwReason, LPVOID lpReserved) {
     switch (fdwReason)
@@ -223,16 +215,14 @@ bool WINAPI DllMain(HMODULE hModule, DWORD fdwReason, LPVOID lpReserved) {
     case DLL_PROCESS_ATTACH:
     {
         char path[MAX_PATH];
-        HMODULE hm = NULL;
         GetModuleHandleExA(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT, (LPCSTR)&f_Direct3DCreate9, &hm);
-        GetModuleFileNameA(hm, path, sizeof(path));
-        *strrchr(path, '\\') = '\0';
-        strcat_s(path, "\\d3d9.ini");
+        getGameDirectory(hm, path, MAX_PATH, "\\bin\\d3d9.ini");
 
         char engineINI[MAX_PATH];
-        GetCurrentDirectoryA(MAX_PATH, engineINI);
-        *strrchr(engineINI, '\\') = '\0';
-        strcat_s(engineINI, "\\data\\settings\\engine.ini");
+        getGameDirectory(hm, engineINI, MAX_PATH, "\\data\\settings\\engine.ini");
+
+        char networkINI[MAX_PATH];
+        getGameDirectory(hm, networkINI, MAX_PATH, "\\data\\settings\\network.ini");
 
         //MessageBoxA(NULL, engineINI, "TEST", MB_OK);
 
@@ -240,26 +230,61 @@ bool WINAPI DllMain(HMODULE hModule, DWORD fdwReason, LPVOID lpReserved) {
         config.LoadFile(path);
 
         EngineData* engineData = loadEngineSettings(config);
+
         CameraData* cameraData = loadCameraSettings(config);
+        cameraData->bDebugMode = engineData->bDebugMode;
+
         LobbyData* lobbyData = loadLobbySettings(config);
 
+        if (engineData->bDebugMode) {
+            AllocConsole();
+            freopen_s(&f, "CONOUT$", "w", stdout);
+            ZoomPatch::startupMessage();
+        }
+
+        std::cout << "Writing engine INI: " << engineINI << std::endl;
         setEngineData(engineINI, engineData);
+
+        getGameDirectory(hm, path, MAX_PATH, "\\bin\\__config_cache");
+        memcpy_s(cameraData->VkConfigPath, MAX_PATH, path, MAX_PATH);
+        std::cout << "Vk config cache location: " << path << std::endl;
+
+        // on Linux we use d3d9 provided by the system
+        if (engineData->bNativeDX || isWine()) {
+            showMessage("Using system DX9");
+
+            GetSystemDirectory(path, MAX_PATH);
+            strcat_s(path, "\\d3d9.dll");
+
+            if (engineData->fpsLimit > 0) {
+                bFPSLimit = true;
+                fFPSLimit = engineData->fpsLimit;
+            }
+            else {
+                bFPSLimit = false;
+            }
+        }
+        else {
+            showMessage("Using shipped DX9");
+
+            SetEnvironmentVariable("DXVK_LOG_LEVEL", "none");
+            SetEnvironmentVariable("DXVK_CONFIG_FILE", path);
+
+            initDXconfig(path, engineData);
+
+            getGameDirectory(hm, path, MAX_PATH, "\\bin\\d3d9vk.dll");
+
+            bFPSLimit = false;
+        }
 
         if (cameraData->bEnabled)
             CreateThread(0, 0, ZoomPatchThread, cameraData, 0, 0);
 
+        // disabled for now
         //if (lobbyData->bEnabled)
-        if (false) // disabled for now
-            CreateThread(0, 0, LobbyPatchThread, lobbyData, 0, 0);
+        //    CreateThread(0, 0, LobbyPatchThread, lobbyData, 0, 0);
 
-        fFPSLimit = static_cast<float>(engineData->fpsLimit);
-
-        if (fFPSLimit)
-            bFPSLimit = true;
-
-
-        GetSystemDirectory(path, MAX_PATH);
-        strcat_s(path, "\\d3d9.dll");
+        showMessage(path);
         d3d9.dll = LoadLibrary(path);
         d3d9.D3DPERF_BeginEvent = (LPD3DPERF_BEGINEVENT)GetProcAddress(d3d9.dll, "D3DPERF_BeginEvent");
         d3d9.D3DPERF_EndEvent = (LPD3DPERF_ENDEVENT)GetProcAddress(d3d9.dll, "D3DPERF_EndEvent");
@@ -279,9 +304,9 @@ bool WINAPI DllMain(HMODULE hModule, DWORD fdwReason, LPVOID lpReserved) {
         break;
     }
     case DLL_PROCESS_DETACH:
-        TerminateProcess(bridgeProcessInfo.hProcess, 0);
-        CloseHandle(bridgeProcessInfo.hProcess);
-        CloseHandle(bridgeProcessInfo.hThread);
+        //TerminateProcess(bridgeProcessInfo.hProcess, 0);
+        //CloseHandle(bridgeProcessInfo.hProcess);
+        //CloseHandle(bridgeProcessInfo.hThread);
 
         FreeLibrary(hModule);
         break;

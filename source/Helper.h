@@ -1,6 +1,9 @@
 #pragma once
+
 #include <Windows.h>
 #include <vector>
+#include <sstream>
+#include <iostream>
 
 struct memoryPTR {
     DWORD base_address;
@@ -27,6 +30,11 @@ void showMessage(LPCSTR val);
 
 void GetDesktopResolution(int& horizontal, int& vertical);
 void GetDesktopResolution2(int& hor, int& vert);
-float calcAspectRatio(int horizontal, int vertical);
+
+void getGameDirectory(HMODULE hm, char* path, int size, char* location);
 
 bool IsKeyPressed(int vKey);
+
+bool isWine();
+
+float calcAspectRatio(int horizontal, int vertical);
