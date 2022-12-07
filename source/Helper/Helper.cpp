@@ -143,9 +143,12 @@ bool isWine() {
     return ntdllMod && GetProcAddress(ntdllMod, "wine_get_version");
 }
 
-void getGameDirectory(HMODULE hm, char* path, int size, char* loc) {
+void getGameDirectory(HMODULE hm, char* path, int size, char* loc, int levels) {
     GetModuleFileName(hm, path, size);
-    *strrchr(path, '\\') = '\0';
-    *strrchr(path, '\\') = '\0';
+
+    for (int i = 0; i <= levels; i++) {
+        *strrchr(path, '\\') = '\0';
+    }
+
     strcat_s(path, size, loc);
 }

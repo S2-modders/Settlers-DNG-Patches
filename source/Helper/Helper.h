@@ -31,7 +31,7 @@ void showMessage(LPCSTR val);
 void GetDesktopResolution(int& horizontal, int& vertical);
 void GetDesktopResolution2(int& hor, int& vert);
 
-void getGameDirectory(HMODULE hm, char* path, int size, char* location);
+void getGameDirectory(HMODULE hm, char* path, int size, char* location, int levels = 0);
 
 bool IsKeyPressed(int vKey);
 

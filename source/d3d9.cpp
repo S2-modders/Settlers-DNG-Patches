@@ -216,13 +216,13 @@ bool WINAPI DllMain(HMODULE hModule, DWORD fdwReason, LPVOID lpReserved) {
     {
         char path[MAX_PATH];
         GetModuleHandleExA(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT, (LPCSTR)&f_Direct3DCreate9, &hm);
-        getGameDirectory(hm, path, MAX_PATH, "\\bin\\d3d9.ini");
+        getGameDirectory(hm, path, MAX_PATH, "\\bin\\d3d9.ini", 1);
 
         char engineINI[MAX_PATH];
-        getGameDirectory(hm, engineINI, MAX_PATH, "\\data\\settings\\engine.ini");
+        getGameDirectory(hm, engineINI, MAX_PATH, "\\data\\settings\\engine.ini", 1);
 
         char networkINI[MAX_PATH];
-        getGameDirectory(hm, networkINI, MAX_PATH, "\\data\\settings\\network.ini");
+        getGameDirectory(hm, networkINI, MAX_PATH, "\\data\\settings\\network.ini", 1);
 
         //MessageBoxA(NULL, engineINI, "TEST", MB_OK);
 
@@ -243,7 +243,7 @@ bool WINAPI DllMain(HMODULE hModule, DWORD fdwReason, LPVOID lpReserved) {
         std::cout << "Writing engine INI: " << engineINI << std::endl;
         setEngineData(engineINI, engineData);
 
-        getGameDirectory(hm, path, MAX_PATH, "\\bin\\__config_cache");
+        getGameDirectory(hm, path, MAX_PATH, "\\bin\\__config_cache", 1);
         memcpy_s(cameraData->VkConfigPath, MAX_PATH, path, MAX_PATH);
         std::cout << "Vk config cache location: " << path << std::endl;
 
@@ -270,7 +270,7 @@ bool WINAPI DllMain(HMODULE hModule, DWORD fdwReason, LPVOID lpReserved) {
 
             initDXconfig(path, engineData);
 
-            getGameDirectory(hm, path, MAX_PATH, "\\bin\\d3d9vk.dll");
+            getGameDirectory(hm, path, MAX_PATH, "\\bin\\d3d9vk.dll", 1);
 
             bFPSLimit = false;
         }
