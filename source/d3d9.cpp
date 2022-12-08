@@ -8,6 +8,7 @@
 #include "d3d9.h"
 
 #include "Helper/Helper.h"
+#include "Helper/Logger.h"
 
 //#include "Lobby.h"
 #include "Config.h"
@@ -201,6 +202,9 @@ VOID WINAPI f_PSGPSampleTexture(class D3DFE_PROCESSVERTICES* a, unsigned int b, 
 Testing Ground
 *************************/
 
+void test() {
+}
+
 /*************************
 DllMain
 *************************/
@@ -234,22 +238,19 @@ bool WINAPI DllMain(HMODULE hModule, DWORD fdwReason, LPVOID lpReserved) {
         cameraData->bDebugMode = engineData->bDebugMode;
         LobbyData* lobbyData = loadLobbySettings(config);
 
-        if (engineData->bDebugMode) {
-            AllocConsole();
-            freopen_s(&f, "CONOUT$", "w", stdout);
-            ZoomPatch::startupMessage();
-        }
+        Logger log("DX9 MAIN", engineData->bDebugMode);
+        ZoomPatch::startupMessage();
 
-        std::cout << "Writing engine INI: " << engineINI << std::endl;
+        log.debug() << "Writing engine INI: " << engineINI << std::endl;
         setEngineData(engineINI, engineData);
 
         getGameDirectory(hm, path, MAX_PATH, "\\bin\\__config_cache", 1);
         memcpy_s(cameraData->VkConfigPath, MAX_PATH, path, MAX_PATH);
-        std::cout << "Vk config cache location: " << path << std::endl;
+        log.debug() << "Vk config cache location: " << path << std::endl;
 
         // on Linux we use d3d9 provided by the system
         if (engineData->bNativeDX || isWine()) {
-            showMessage("Using system DX9");
+            log.info("Using system DX9");
 
             GetSystemDirectory(path, MAX_PATH);
             strcat_s(path, "\\d3d9.dll");
@@ -263,7 +264,7 @@ bool WINAPI DllMain(HMODULE hModule, DWORD fdwReason, LPVOID lpReserved) {
             }
         }
         else {
-            showMessage("Using shipped DX9");
+            log.info("Using shipped DX9");
 
             SetEnvironmentVariable("DXVK_LOG_LEVEL", "none");
             SetEnvironmentVariable("DXVK_CONFIG_FILE", path);
@@ -282,7 +283,8 @@ bool WINAPI DllMain(HMODULE hModule, DWORD fdwReason, LPVOID lpReserved) {
         //if (lobbyData->bEnabled)
         //    CreateThread(0, 0, LobbyPatchThread, lobbyData, 0, 0);
 
-        showMessage(path);
+        log.debug(path);
+
         d3d9.dll = LoadLibrary(path);
         d3d9.D3DPERF_BeginEvent = (LPD3DPERF_BEGINEVENT)GetProcAddress(d3d9.dll, "D3DPERF_BeginEvent");
         d3d9.D3DPERF_EndEvent = (LPD3DPERF_ENDEVENT)GetProcAddress(d3d9.dll, "D3DPERF_EndEvent");
