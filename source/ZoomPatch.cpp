@@ -166,8 +166,9 @@ ZoomPatch::ZoomPatch(PatchData& patchData, CameraData* cameraData) : patchData(p
 
 void ZoomPatch::startupMessage() {
     std::cout << "ZoomPatch & LobbyPatch by zocker_160 - Version: v" << version_maj << "." << version_min << "\n";
-    std::cout << "Debug mode enabled!\n";
+    std::cout << "Debug mode enabled! \n";
     std::cout << "Waiting for application startup...\n";
+    std::cout << std::endl;
 }
 
 int ZoomPatch::run() {
