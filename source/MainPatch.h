@@ -41,12 +41,13 @@ private:
 
     bool isWorldObject();
     
-    void patchZoom();
+    void patchCamera();
     void patchZoomIncrement();
-    bool calcZoomValue();
 
     // TODO: this should be in Lobby.h
     void patchLobbyFilter();
+
+    bool calcZoomValue();
 
     void doDebug();
 };

@@ -184,7 +184,8 @@ int MainPatch::run() {
 
     for (;; Sleep(1000)) {
         worldObj = (float*)tracePointer(&patchData.worldObject);
-        patchZoom();
+
+        patchCamera();
 
         doDebug();
     }
@@ -202,7 +203,7 @@ bool MainPatch::isWorldObject() {
         return true;
 }
 
-void MainPatch::patchZoom() {
+void MainPatch::patchCamera() {
     if (*worldObj == 0)
         return;
 
@@ -215,6 +216,7 @@ void MainPatch::patchZoom() {
             logger.debug("WideView disabled");
 
         *maxZoom = newZoomValue;
+        logger.debug() << "New MaxZoom: " << newZoomValue << std::endl;
 
         patchZoomIncrement();
     }
@@ -235,66 +237,51 @@ void MainPatch::patchZoomIncrement() {
     writeBytes(calcAddress(patchData.zoomIncrAddr), &zoomStep_p, 4);
     writeBytes(calcAddress(patchData.zoomDecrAddr), &zoomStep_p, 4);
 
-    logger.debug("Zoom step set");
+    logger.debug("Zoom increment set");
 }
 
 bool MainPatch::calcZoomValue() {
+    /* maxZoomValue will be set depending on the aspect ratio of the screen */
     float aspr = calcAspectRatio();
 
-    if (aspr > 0.0f && aspr <= 20.0f) {
-        /* maxZoomValue will be set depending on the aspect ratio of the screen */
-        if (cameraData->bWideView) {
-            if (aspr < 1.5f) {
-                newZoomValue = 6.0f;
-                return true;
-            }
-            else if (aspr < 1.9f) {
-                newZoomValue = 7.0f;
-                return true;
-            }
-            else if (aspr < 2.6f) {
-                newZoomValue = 8.0f;
-                return true;
-            }
-            else if (aspr >= 2.6f) {
-                newZoomValue = 9.0f;
-                return true;
-            }
-            else {
-                return false;
-            }
-        }
-        else {
-            if (aspr < 1.5f) {
-                newZoomValue = 4.0f;
-                return true;
-            }
-            else if (aspr < 1.9f) {
-                newZoomValue = 5.0f;
-                return true;
-            }
-            else if (aspr < 2.2f) {
-                newZoomValue = 6.0f;
-                return true;
-            }
-            else if (aspr < 2.6f) {
-                newZoomValue = 7.0f;
-                return true;
-            }
-            else if (aspr >= 2.6f) {
-                newZoomValue = 7.0f;
-                return true;
-            }
-            else {
-                return false;
-            }
-        }
+    if (aspr <= 0.0f || aspr > 20.0f) {
+        logger.error() << "ASPR is ridiculous (" << aspr << ")" << std::endl;
+        return false;
+    }
+
+    if (cameraData->bWideView) {
+        if (aspr < 1.5f)
+            newZoomValue = 5.0f;
+        else if (aspr < 1.9f)
+            newZoomValue = 6.0f;
+        else if (aspr < 2.2f)
+            newZoomValue = 7.0f;
+        else if (aspr < 2.5f)
+            newZoomValue = 8.0f;
+        else if (aspr >= 2.5f)
+            newZoomValue = 9.0f;
+        else
+            return false;
 
         return true;
     }
-    else {
+
+    if (aspr < 1.5f)
+        newZoomValue = 4.0f;
+    else if (aspr < 1.9f)
+        newZoomValue = 5.0f;
+    else if (aspr < 2.2f)
+        newZoomValue = 6.0f;
+    else if (aspr < 2.5f)
+        newZoomValue = 7.0f;
+    else if (aspr < 3.2f)
+        newZoomValue = 8.0f;
+    else if (aspr >= 3.2f)
+        newZoomValue = 9.0f;
+    else
         return false;
-    }
+
+    return true;
 }
 
 void MainPatch::doDebug() {
@@ -302,15 +289,23 @@ void MainPatch::doDebug() {
         return;
 
     if (isKeyPressed(VK_F3)) {
-        int t_hor = 0;
-        int t_ver = 0;
+        int t_hor, t_ver;
         getDesktopResolution2(t_hor, t_ver);
         std::stringstream ss;
-        ss << "DEBUG:  xRes: " << t_hor << " yRes: " << t_ver;
+        ss << "xRes: " << t_hor << " yRes: " << t_ver;
         ss << " ASPR: " << calcAspectRatio(t_hor, t_ver);
         ss << " MaxZoomValue: " << newZoomValue;
         logger.debug() << ss.str() << std::endl;
         //MessageBoxA(NULL, (LPCSTR)ss.str().c_str(), "ZoomPatch by zocker_160", MB_OK);
+    }
+    if (isKeyPressed(VK_F4)) {
+        int h, v;
+        getDesktopResolution(h, v);
+        std::stringstream ss;
+        ss << "xRes: " << h << " yRes: " << v;
+        ss << " ASPR: " << calcAspectRatio(h, v);
+        ss << " MaxZoomValue: " << newZoomValue;
+        logger.debug() << ss.str() << std::endl;
     }
     if (isKeyPressed(VK_F6)) {
         if (*worldObj != 0) {
@@ -402,12 +397,12 @@ int prepare(CameraData* cData) {
             }
         }
 
-        logger.info("retrying...");
+        logger.info("Version check retrying...");
         Sleep(retryTimeout);
     }
 
     if (!bSupported) {
-        logger.error() << "This game version is not supported! \n"
+        logger.error() << "This game version or editor is not supported! \n"
             << "Supported game versions are: \n"
             << "- GOG (11757) \n"
             << "- Base Game Gold Edition (11757) \n"
