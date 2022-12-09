@@ -210,6 +210,7 @@ DllMain
 FILE* f;
 HMODULE hm = NULL;
 CSimpleIniA config;
+char VkConfigPath[MAX_PATH];
 
 bool WINAPI DllMain(HMODULE hModule, DWORD fdwReason, LPVOID lpReserved) {
     switch (fdwReason)
@@ -246,6 +247,7 @@ bool WINAPI DllMain(HMODULE hModule, DWORD fdwReason, LPVOID lpReserved) {
 
         getGameDirectory(hm, path, MAX_PATH, "\\bin\\__config_cache", 1);
         memcpy_s(cameraData->VkConfigPath, MAX_PATH, path, MAX_PATH);
+        memcpy_s(VkConfigPath, MAX_PATH, path, MAX_PATH);
         //logger.debug() << "Vk config cache location: " << path << std::endl;
 
         // on Linux we use d3d9 provided by the system
@@ -310,6 +312,8 @@ bool WINAPI DllMain(HMODULE hModule, DWORD fdwReason, LPVOID lpReserved) {
         //TerminateProcess(bridgeProcessInfo.hProcess, 0);
         //CloseHandle(bridgeProcessInfo.hProcess);
         //CloseHandle(bridgeProcessInfo.hThread);
+
+        remove(VkConfigPath);
 
         FreeLibrary(hModule);
         break;
