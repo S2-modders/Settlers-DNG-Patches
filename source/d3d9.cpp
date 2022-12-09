@@ -12,11 +12,9 @@
 
 //#include "Lobby.h"
 #include "Config.h"
-#include "ZoomPatch.h"
+#include "MainPatch.h"
 
 #include "SimpleIni/SimpleIni.h"
-
-#include <sstream>
 
 /*************************
 Edit Values
@@ -238,19 +236,20 @@ bool WINAPI DllMain(HMODULE hModule, DWORD fdwReason, LPVOID lpReserved) {
         cameraData->bDebugMode = engineData->bDebugMode;
         LobbyData* lobbyData = loadLobbySettings(config);
 
-        Logger log("DX9 MAIN", engineData->bDebugMode);
-        ZoomPatch::startupMessage();
+        Logging::Logger logger("DX9", engineData->bDebugMode);
+        MainPatch::startupMessage();
 
-        log.debug() << "Writing engine INI: " << engineINI << std::endl;
+        //logger.debug() << "Writing engine INI: " << engineINI << std::endl;
+        logger.debug("Setting engine INI");
         setEngineData(engineINI, engineData);
 
         getGameDirectory(hm, path, MAX_PATH, "\\bin\\__config_cache", 1);
         memcpy_s(cameraData->VkConfigPath, MAX_PATH, path, MAX_PATH);
-        //log.debug() << "Vk config cache location: " << path << std::endl;
+        //logger.debug() << "Vk config cache location: " << path << std::endl;
 
         // on Linux we use d3d9 provided by the system
         if (engineData->bNativeDX || isWine()) {
-            log.info("Using system DX9");
+            logger.info() << "Using system DX9: ";
 
             GetSystemDirectory(path, MAX_PATH);
             strcat_s(path, "\\d3d9.dll");
@@ -264,12 +263,12 @@ bool WINAPI DllMain(HMODULE hModule, DWORD fdwReason, LPVOID lpReserved) {
             }
         }
         else {
-            log.info("Using shipped DX9");
+            logger.info() << "Using shipped DX9: ";
 
             SetEnvironmentVariable("DXVK_LOG_LEVEL", "none");
             SetEnvironmentVariable("DXVK_CONFIG_FILE", path);
 
-            log.debug("Writing Vk config cache");
+            logger.debug("Writing Vk config cache");
             initDXconfig(path, engineData);
 
             getGameDirectory(hm, path, MAX_PATH, "\\bin\\d3d9vk.dll", 1);
@@ -278,13 +277,13 @@ bool WINAPI DllMain(HMODULE hModule, DWORD fdwReason, LPVOID lpReserved) {
         }
 
         if (cameraData->bEnabled)
-            CreateThread(0, 0, ZoomPatchThread, cameraData, 0, 0);
+            CreateThread(0, 0, MainPatchThread, cameraData, 0, 0);
 
         // disabled for now
         //if (lobbyData->bEnabled)
         //    CreateThread(0, 0, LobbyPatchThread, lobbyData, 0, 0);
 
-        log.debug(path);
+        logger.naked(path);
 
         d3d9.dll = LoadLibrary(path);
         d3d9.D3DPERF_BeginEvent = (LPD3DPERF_BEGINEVENT)GetProcAddress(d3d9.dll, "D3DPERF_BeginEvent");

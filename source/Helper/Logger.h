@@ -1,5 +1,3 @@
-#pragma once
-
 /*
  * simple header only logger class
  *
@@ -7,9 +5,12 @@
  * @license GPLv3
  *
  */
+#pragma once
 
 #include <Windows.h>
 #include <iostream>
+
+namespace Logging {
 
 typedef std::ostream& (*Manip1)(std::ostream&);
 
@@ -33,7 +34,7 @@ public:
 		std::cout << fp;
 		return *this;
 	}
-	
+
 	Logger& debug() {
 		return printSelf("DEBUG");
 	}
@@ -62,6 +63,13 @@ public:
 		error() << msg << std::endl;
 	}
 
+	Logger& naked() {
+		return *this;
+	}
+	void naked(char* msg) {
+		naked() << msg << std::endl;
+	}
+
 	friend std::ostream& operator<<(std::ostream& out, const Logger& logger) {
 		out << "[" << logger.module << "] " << logger.level << ":";
 		return out;
@@ -79,3 +87,5 @@ private:
 		return *this;
 	}
 };
+
+}

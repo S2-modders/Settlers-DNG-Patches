@@ -3,8 +3,8 @@
  *
  * This source code is licensed under GPL-v3
  */
-
 #pragma once
+
 #include "Config.h"
 
 EngineData* loadEngineSettings(CSimpleIni& ini) {

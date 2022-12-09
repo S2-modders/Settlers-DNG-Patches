@@ -104,7 +104,7 @@ void showMessage(LPCSTR val) {
 
 /* resolution stuff */
 
-void GetDesktopResolution(int& horizontal, int& vertical)
+void getDesktopResolution(int& horizontal, int& vertical)
 {
     RECT desktop;
     // Get a handle to the desktop window
@@ -117,22 +117,27 @@ void GetDesktopResolution(int& horizontal, int& vertical)
     horizontal = desktop.right;
     vertical = desktop.bottom;
 }
-void GetDesktopResolution2(int& hor, int& vert) {
+void getDesktopResolution2(int& hor, int& vert) {
     hor = GetSystemMetrics(SM_CXSCREEN);
     vert = GetSystemMetrics(SM_CYSCREEN);
 }
 
 float calcAspectRatio(int horizontal, int vertical) {
-    if (horizontal != 0 && vertical != 0) {
+    if (horizontal > 0 && vertical > 0)
         return (float)horizontal / (float)vertical;
-    }
-    else {
+    else
         return -1.0f;
-    }
+}
+
+float calcAspectRatio() {
+    int horizontal, vertical;
+
+    getDesktopResolution2(horizontal, vertical);
+    return calcAspectRatio(horizontal, vertical);
 }
 
 /* other helper functions and stuff */
-bool IsKeyPressed(int vKey) {
+bool isKeyPressed(int vKey) {
     /* some bitmask trickery because why not */
     return GetAsyncKeyState(vKey) & 0x8000;
 }

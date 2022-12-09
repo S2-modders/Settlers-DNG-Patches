@@ -8,12 +8,12 @@
 #define WIN32_LEAN_AND_MEAN
 
 #include "Config.h"
+#include "Helper/Logger.h"
 
 #include "httplib/httplib.h"
 #include "SimpleIni/SimpleIni.h"
 
 #include <Windows.h>
-#include <stdlib.h>
 #include <sstream>
 #include <thread>
 

@@ -7,6 +7,12 @@
 
 #include "Lobby.h"
 
+namespace Lobby_Logger {
+	Logging::Logger logger("LOBBY");
+}
+using Lobby_Logger::logger;
+
+
 STARTUPINFO si;
 PROCESS_INFORMATION bridgeProcessInfo;
 
@@ -19,7 +25,7 @@ LobbyData* lobbyData;
 unsigned int bridgePort;
 
 void requestRemotePort(const char* ip, int controllerPort) {
-	showMessage("Requesting remote Port");
+	logger.debug("Requesting remote Port");
 
 	std::stringstream url;
 	url << "http://" << ip << ":" << controllerPort;
@@ -30,23 +36,20 @@ void requestRemotePort(const char* ip, int controllerPort) {
 		if (res->status == 200) {
 			bridgePort = std::atoi(res->body.c_str());
 
-			showMessage("port received:");
-			showMessage((int)bridgePort);
-
+			logger.debug() << "port received: " << bridgePort << std::endl;
 		} else {
-			showMessage("fail");
-			showMessage(res->status);
+			logger.error() << "API request failed with " << res->status << std::endl;
 			bridgePort = 0;
 		}
 	}
 }
 
 void createTCPBridge() {
-	showMessage("CreateGameServerPayload triggered!");
+	logger.debug("CreateGameServerPayload triggered!");
 
-	showMessage((int)bridgeProcessInfo.dwProcessId);
+	logger.debug() << "Bridge process ID: " << bridgeProcessInfo.dwProcessId << std::endl;
 	if (bridgeProcessInfo.dwProcessId > 0) {
-		showMessage("Bridge seems to be already running...");
+		logger.warn("Bridge seems to be already running...");
 		return;
 	}
 
@@ -59,7 +62,7 @@ void createTCPBridge() {
 	strcat_s(iniPath, "\\bin\\frpc.ini");
 	strcat_s(exePath, "\\bin\\frpc.exe");
 
-	showMessage(iniPath);
+	logger.debug() << "frpc ini path: " << iniPath << std::endl;
 
 	CSimpleIniA ini;
 	ini.SetUnicode();
@@ -67,10 +70,11 @@ void createTCPBridge() {
 
 	const char* serverIP = ini.GetValue("common", "server_addr", "0.0.0.0");
 	long controllerPort = ini.GetLongValue("common", "server_controller_port", 5480);
-	showMessage(serverIP);
-	showMessage(controllerPort);
 
-	showMessage("starting TCP bridge...");
+	logger.info() << "server IP: " << serverIP
+		<< ", controller port: " << controllerPort << std::endl;
+
+	logger.debug("starting TCP bridge...");
 
 	std::stringstream command;
 	command << "\"" << exePath << "\" -c .\\bin\\frpc.ini";
@@ -78,14 +82,14 @@ void createTCPBridge() {
 	requestRemotePort(serverIP, controllerPort);
 
 	if (bridgePort == 0) {
-		showMessage("failed to get bridge port, aborting");
+		logger.error("failed to get bridge port, aborting");
 		return;
 	}
 
 	ini.SetLongValue("s2lobby", "remote_port", (long)bridgePort);
 	ini.SaveFile(iniPath);
 
-	showMessage("Creating new process...");
+	logger.debug("Creating new process...");
 
 	ZeroMemory(&si, sizeof(si));
 	si.cb = sizeof(si);;
@@ -93,8 +97,7 @@ void createTCPBridge() {
 		
 	CreateProcessA(NULL, (LPSTR)command.str().c_str(), NULL, NULL, false, 0, NULL, NULL, &si, &bridgeProcessInfo);
 
-	
-	showMessage("End injected function");
+	logger.debug("End injected function");
 }
 
 DWORD jmpBackAddr;
@@ -111,7 +114,7 @@ void __declspec(naked) jumperFunction() {
 }
 
 void setTincatDebugMode() {
-	showMessage("Patching Lobby Debug mode");
+	logger.debug("Patching Lobby Debug mode");
 	short lobbyDebug = 0x11EB;
 
 	short* lobby1 = (short*)((DWORD)getMatchmakingAddress() + LoggerAddr1);
@@ -122,7 +125,7 @@ void setTincatDebugMode() {
 }
 
 void setNetworking(LobbyData* tData) {
-	showMessage("Patching network.ini");
+	logger.debug("Patching network.ini");
 	char iniPath[MAX_PATH];
 
 	GetCurrentDirectoryA(MAX_PATH, iniPath);

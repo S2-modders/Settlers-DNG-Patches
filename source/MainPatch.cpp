@@ -5,9 +5,14 @@
  *
  */
 
-#include "ZoomPatch.h"
+#include "MainPatch.h"
 
-/* 
+namespace MainPatch_Logger {
+    Logging::Logger logger("MAIN");
+}
+using MainPatch_Logger::logger;
+
+ /* 
  * memory values 
  */
 
@@ -159,24 +164,21 @@ namespace Addon_Gold {
 
 
 
-ZoomPatch::ZoomPatch(PatchData& patchData, CameraData* cameraData) : patchData(patchData) {
+MainPatch::MainPatch(PatchData& patchData, CameraData* cameraData) : patchData(patchData) {
     this->cameraData = cameraData;
     this->zoomStep_p = &cameraData->fZoomIncrement;
 }
 
-void ZoomPatch::startupMessage() {
-    std::cout << "ZoomPatch & LobbyPatch by zocker_160 - Version: v" << version_maj << "." << version_min << "\n";
-    std::cout << "Debug mode enabled! \n";
-    std::cout << "Waiting for application startup...\n";
-    std::cout << std::endl;
+void MainPatch::startupMessage() {
+    std::cout << "ZoomPatch & LobbyPatch by zocker_160 - Version: v" << version_maj << "." << version_min << "\n"
+        << "Debug mode enabled! \n"
+        << "Waiting for application startup... \n"
+        << std::endl;
 }
 
-int ZoomPatch::run() {
+int MainPatch::run() {
     if (!isWorldObject())
         return 0;
-
-    // delete temporary VK config file
-    remove(cameraData->VkConfigPath);
 
     //patchLobbyFilter();
 
@@ -189,27 +191,28 @@ int ZoomPatch::run() {
 }
 
 
-bool ZoomPatch::isWorldObject() {
+bool MainPatch::isWorldObject() {
     float* tmp = (float*)calcAddress(patchData.worldObject.base_address);
 
     if (*tmp < 0) {
-        showMessage("WorldObject does not exist!");
+        logger.error("WorldObject does not exist!");
         return false;
     }
     else
         return true;
 }
 
-void ZoomPatch::patchZoom() {
+void MainPatch::patchZoom() {
     if (*worldObj == 0)
         return;
 
     maxZoom = (float*)tracePointer(&patchData.maxZoom);
+
     if (calcZoomValue() && *maxZoom != newZoomValue) {
         if (cameraData->bWideView)
-            showMessage("WideView enabled");
+            logger.debug("WideView enabled");
         else
-            showMessage("WideView disabled");
+            logger.debug("WideView disabled");
 
         *maxZoom = newZoomValue;
 
@@ -217,27 +220,26 @@ void ZoomPatch::patchZoom() {
     }
 }
 
-void ZoomPatch::patchLobbyFilter() {
+void MainPatch::patchLobbyFilter() {
     if (patchData.lobbyVersionFilterAddr == 0)
         return;
 
-    showMessage("patching lobby version filter");
+    logger.debug("patching lobby version filter");
 
     short jne = 0x1E75;
     short* filter = (short*)calcAddress(patchData.lobbyVersionFilterAddr);
     writeBytes(filter, &jne, 2);
 }
 
-void ZoomPatch::patchZoomIncrement() {
+void MainPatch::patchZoomIncrement() {
     writeBytes(calcAddress(patchData.zoomIncrAddr), &zoomStep_p, 4);
     writeBytes(calcAddress(patchData.zoomDecrAddr), &zoomStep_p, 4);
 
-    showMessage("Zoom step set");
+    logger.debug("Zoom step set");
 }
 
-bool ZoomPatch::calcZoomValue() {
-    GetDesktopResolution2(hor, ver);
-    float aspr = calcAspectRatio(hor, ver);
+bool MainPatch::calcZoomValue() {
+    float aspr = calcAspectRatio();
 
     if (aspr > 0.0f && aspr <= 20.0f) {
         /* maxZoomValue will be set depending on the aspect ratio of the screen */
@@ -295,70 +297,66 @@ bool ZoomPatch::calcZoomValue() {
     }
 }
 
-void ZoomPatch::doDebug() {
+void MainPatch::doDebug() {
     if (!cameraData->bDebugMode)
         return;
 
-    if (IsKeyPressed(VK_F3)) {
+    if (isKeyPressed(VK_F3)) {
         int t_hor = 0;
         int t_ver = 0;
-        GetDesktopResolution2(t_hor, t_ver);
+        getDesktopResolution2(t_hor, t_ver);
         std::stringstream ss;
         ss << "DEBUG:  xRes: " << t_hor << " yRes: " << t_ver;
         ss << " ASPR: " << calcAspectRatio(t_hor, t_ver);
         ss << " MaxZoomValue: " << newZoomValue;
-        std::cout << ss.str() << "\n";
+        logger.debug() << ss.str() << std::endl;
         //MessageBoxA(NULL, (LPCSTR)ss.str().c_str(), "ZoomPatch by zocker_160", MB_OK);
     }
-    if (IsKeyPressed(VK_F6)) {
+    if (isKeyPressed(VK_F6)) {
         if (*worldObj != 0) {
             //*(float*)(tracePointer(&CurrZoomPTR)) += 1.0f;
-            showMessage(*(float*)(tracePointer(&patchData.maxZoom)));
+            logger.debug() << "maxZoom: " << *(float*)(tracePointer(&patchData.maxZoom)) << std::endl;
         }
     }
-    if (IsKeyPressed(VK_F7)) {
-        showMessage(*(float*)(tracePointer(&patchData.currZoom)));
+    if (isKeyPressed(VK_F7)) {
+        logger.debug() << "currZoom: " << *(float*)(tracePointer(&patchData.currZoom)) << std::endl;
     }
-    if (IsKeyPressed(VK_F8)) {
-        std::cout << "World address: " << worldObj << " World value: " << *worldObj << "\n";
+    if (isKeyPressed(VK_F8)) {
+        logger.debug() << "World address: " << worldObj << " World value: " << *worldObj << std::endl;
     }
 }
 
 
-bool checkSettlersII(char* versionString) {
+bool isSupportedVersion(char* versionString) {
     char versionSettlers[9] = "Version:"; // All Settlers II remakes have this
     char tVersion[9];
 
     if (!readBytes(versionString, tVersion, 8))
         return false;
+
     //memcpy(tVersion, versionString, 8);
     tVersion[8] = 0;
 
-    showMessage(tVersion);
+    //showMessage(tVersion);
 
-    if (strcmp(tVersion, versionSettlers) != 0)
-        return false;
-    else
-        return true;
+    return strcmp(tVersion, versionSettlers) == 0;
 }
 
-bool checkSettlersVersion(char* versionString) {
+bool isSettlersVersion(char* versionString) {
     char versionBase[15] = "Version: 11757"; // GOG version & patched CD version
     char versionAddon[15] = "Version: 11758"; // Wikings Addon
     char gameVersion[15];
 
     if (!readBytes(versionString, gameVersion, 14))
         return false;
+
     //memcpy(gameVersion, versionString, 14);
     gameVersion[14] = 0;
 
-    showMessage(gameVersion);
+    //showMessage(gameVersion);
 
-    if (strcmp(gameVersion, versionBase) != 0
-            && strcmp(gameVersion, versionAddon) != 0)
-        return false;
-    else
-        return true;
+    return strcmp(gameVersion, versionBase) == 0
+        || strcmp(gameVersion, versionAddon) == 0;
 }
 
 
@@ -366,54 +364,62 @@ int prepare(CameraData* cData) {
     /* wait a bit for the application to start up (might crash otherwise) */
     Sleep(4000);
 
+    // delete temporary VK config file after a few seconds
+    std::thread rmThread([](char* VkPath, int sleep = 1e4) {
+        Sleep(sleep);
+        remove(VkPath);
+    }, cData->VkConfigPath);
+    rmThread.detach();
+
     /* check if gameVersion is supported */
     char* sBase = (char*)calcAddress(Base_GOG::gameVersionAddr);
     char* sBaseGold = (char*)calcAddress(Base_Gold::gameVersionAddr);
     char* sAddon = (char*)calcAddress(Addon::gameVersionAddr);
     char* sAddonGold = (char*)calcAddress(Addon_Gold::gameVersionAddr);
+    std::vector<char*> sVersions = { sBase, sBaseGold, sAddon, sAddonGold };
+
     bool bSupported = false;
 
     for (int i = 0; i < retryCount; i++) {
+        if (std::any_of(sVersions.begin(), sVersions.end(), isSupportedVersion)) {
+            bSupported = true;
 
-        if (checkSettlersII(sBase) || checkSettlersII(sBaseGold) || checkSettlersII(sAddon) || checkSettlersII(sAddonGold)) {
-            if (checkSettlersVersion(sBase)) {
-                showMessage("Found Base GOG version.");
-                bSupported = true;
-
-                return ZoomPatch(Base_GOG::patchData, cData).run();
+            if (isSettlersVersion(sBase)) {
+                logger.info("Found Base GOG version");
+                return MainPatch(Base_GOG::patchData, cData).run();
             }
-            else if (checkSettlersVersion(sBaseGold)) {
-                showMessage("Found Base Gold Edition version.");
-                bSupported = true;
-
-                return ZoomPatch(Base_Gold::patchData, cData).run();
+            else if (isSettlersVersion(sBaseGold)) {
+                logger.info("Found Base Gold Edition version");
+                return MainPatch(Base_Gold::patchData, cData).run();
             }
-            else if (checkSettlersVersion(sAddon)) {
-                showMessage("Found Addon version.");
-                bSupported = true;
-
-                return ZoomPatch(Addon::patchData, cData).run();
+            else if (isSettlersVersion(sAddon)) {
+                logger.info("Found Addon version");
+                return MainPatch(Addon::patchData, cData).run();
             }
-            else if (checkSettlersVersion(sAddonGold)) {
-                showMessage("Found Addon Gold Edition.");
-                bSupported = true;
-
-                return ZoomPatch(Addon_Gold::patchData, cData).run();
+            else if (isSettlersVersion(sAddonGold)) {
+                logger.info("Found Addon Gold Edition");
+                return MainPatch(Addon_Gold::patchData, cData).run();
             }
         }
 
-        showMessage("retrying...");
+        logger.info("retrying...");
         Sleep(retryTimeout);
     }
 
     if (!bSupported) {
-        showMessage("This game version is not supported!");
+        logger.error() << "This game version is not supported! \n"
+            << "Supported game versions are: \n"
+            << "- GOG (11757) \n"
+            << "- Base Game Gold Edition (11757) \n"
+            << "- Wikings Addon (11758) \n"
+            << "- Wikings Addon Gold Edition (11758)"
+            << std::endl;
         //MessageBoxA(NULL, "This game version is not supported!", "Widescreen Fix ERROR", MB_OK);
     }
 
     return 0;
 }
 
-DWORD WINAPI ZoomPatchThread(LPVOID param) {
+DWORD WINAPI MainPatchThread(LPVOID param) {
     return prepare(reinterpret_cast<CameraData*>(param));
 }

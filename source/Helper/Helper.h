@@ -22,19 +22,14 @@ DWORD* tracePointer(memoryPTR* patch);
 
 bool functionInjector(void* toHook, void* function, int len);
 
-void showMessage(float val);
-void showMessage(int val);
-void showMessage(short val);
-void showMessage(char* val);
-void showMessage(LPCSTR val);
-
-void GetDesktopResolution(int& horizontal, int& vertical);
-void GetDesktopResolution2(int& hor, int& vert);
+void getDesktopResolution(int& horizontal, int& vertical);
+void getDesktopResolution2(int& hor, int& vert);
 
 void getGameDirectory(HMODULE hm, char* path, int size, char* location, int levels = 0);
 
-bool IsKeyPressed(int vKey);
+bool isKeyPressed(int vKey);
 
 bool isWine();
 
+float calcAspectRatio();
 float calcAspectRatio(int horizontal, int vertical);
