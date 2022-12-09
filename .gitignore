@@ -1,6 +1,9 @@
 .directory
 premake*
 VersionInfo*
+frps*
+frpc*
+_*
 
 *.yml
 *.zip
@@ -8,7 +11,12 @@ VersionInfo*
 *.pdb
 *.exp
 *.lib
+*.sln
 
 data/frpc*
 
+*.vcxproj*
+
+.vs/
+.idea/
 build/

@@ -5,10 +5,6 @@
  *
  */
 
-#include <Windows.h>
-#include <iostream>
-#include <sstream>
-#include "ZoomPatch.h"
 #include "Helper.h"
 
  // reading and writing stuff / helper functions and other crap
@@ -108,7 +104,7 @@ void showMessage(LPCSTR val) {
 
 /* resolution stuff */
 
-void GetDesktopResolution(int& horizontal, int& vertical)
+void getDesktopResolution(int& horizontal, int& vertical)
 {
     RECT desktop;
     // Get a handle to the desktop window
@@ -121,22 +117,43 @@ void GetDesktopResolution(int& horizontal, int& vertical)
     horizontal = desktop.right;
     vertical = desktop.bottom;
 }
-void GetDesktopResolution2(int& hor, int& vert) {
+void getDesktopResolution2(int& hor, int& vert) {
     hor = GetSystemMetrics(SM_CXSCREEN);
     vert = GetSystemMetrics(SM_CYSCREEN);
 }
 
 float calcAspectRatio(int horizontal, int vertical) {
-    if (horizontal != 0 && vertical != 0) {
+    if (horizontal > 0 && vertical > 0)
         return (float)horizontal / (float)vertical;
-    }
-    else {
+    else
         return -1.0f;
-    }
+}
+
+float calcAspectRatio() {
+    int horizontal, vertical;
+
+    getDesktopResolution2(horizontal, vertical);
+    return calcAspectRatio(horizontal, vertical);
 }
 
 /* other helper functions and stuff */
-bool IsKeyPressed(int vKey) {
+bool isKeyPressed(int vKey) {
     /* some bitmask trickery because why not */
     return GetAsyncKeyState(vKey) & 0x8000;
+}
+
+bool isWine() {
+    HMODULE ntdllMod = GetModuleHandle("ntdll.dll");
+
+    return ntdllMod && GetProcAddress(ntdllMod, "wine_get_version");
+}
+
+void getGameDirectory(HMODULE hm, char* path, int size, char* loc, int levels) {
+    GetModuleFileName(hm, path, size);
+
+    for (int i = 0; i <= levels; i++) {
+        *strrchr(path, '\\') = '\0';
+    }
+
+    strcat_s(path, size, loc);
 }

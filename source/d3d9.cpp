@@ -3,11 +3,16 @@
  *
  * This source code is licensed under GPL-v3
  */
+#define WIN32_LEAN_AND_MEAN
 
 #include "d3d9.h"
-#include "ZoomPatch.h"
-#include "Lobby.h"
+
+#include "Helper/Helper.h"
+#include "Helper/Logger.h"
+
+//#include "Lobby.h"
 #include "Config.h"
+#include "MainPatch.h"
 
 #include "SimpleIni/SimpleIni.h"
 
@@ -20,10 +25,6 @@ float fFPSLimit;
 
 HRESULT f_IDirect3DDevice9::Present(CONST RECT *pSourceRect, CONST RECT *pDestRect, HWND hDestWindowOverride, CONST RGNDATA *pDirtyRegion)
 {
-    for (int i = 0; i < 16; i++) {
-        SetSamplerState(i, D3DSAMP_MAXANISOTROPY, 16);
-    }
-
     if (bFPSLimit)
     {
         static LARGE_INTEGER PerformanceCount1;
@@ -196,28 +197,19 @@ VOID WINAPI f_PSGPSampleTexture(class D3DFE_PROCESSVERTICES* a, unsigned int b, 
 }
 
 /*************************
-ini patching
+Testing Ground
 *************************/
-void patchEngineIni(bool state) {
-    char iniPath[MAX_PATH];
-    GetCurrentDirectoryA(MAX_PATH, iniPath);
-    *strrchr(iniPath, '\\') = '\0';
-    strcat_s(iniPath, "\\data\\settings\\engine.ini");
 
-    //MessageBoxA(NULL, iniPath, "S2Patch by zocker_160", MB_OK);
-
-    CSimpleIniA ini;
-    ini.SetUnicode();
-    ini.LoadFile(iniPath);
-    ini.SetLongValue("Engine", "hardwareCursor", (long) !state);
-    ini.SaveFile(iniPath);
+void test() {
 }
-
-CSimpleIni config;
 
 /*************************
 DllMain
 *************************/
+
+FILE* f;
+HMODULE hm = NULL;
+CSimpleIniA config;
 
 bool WINAPI DllMain(HMODULE hModule, DWORD fdwReason, LPVOID lpReserved) {
     switch (fdwReason)
@@ -225,16 +217,14 @@ bool WINAPI DllMain(HMODULE hModule, DWORD fdwReason, LPVOID lpReserved) {
     case DLL_PROCESS_ATTACH:
     {
         char path[MAX_PATH];
-        HMODULE hm = NULL;
         GetModuleHandleExA(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT, (LPCSTR)&f_Direct3DCreate9, &hm);
-        GetModuleFileNameA(hm, path, sizeof(path));
-        *strrchr(path, '\\') = '\0';
-        strcat_s(path, "\\d3d9.ini");
+        getGameDirectory(hm, path, MAX_PATH, "\\bin\\d3d9.ini", 1);
 
         char engineINI[MAX_PATH];
-        GetCurrentDirectoryA(MAX_PATH, engineINI);
-        *strrchr(engineINI, '\\') = '\0';
-        strcat_s(engineINI, "\\data\\settings\\engine.ini");
+        getGameDirectory(hm, engineINI, MAX_PATH, "\\data\\settings\\engine.ini", 1);
+
+        char networkINI[MAX_PATH];
+        getGameDirectory(hm, networkINI, MAX_PATH, "\\data\\settings\\network.ini", 1);
 
         //MessageBoxA(NULL, engineINI, "TEST", MB_OK);
 
@@ -243,25 +233,58 @@ bool WINAPI DllMain(HMODULE hModule, DWORD fdwReason, LPVOID lpReserved) {
 
         EngineData* engineData = loadEngineSettings(config);
         CameraData* cameraData = loadCameraSettings(config);
+        cameraData->bDebugMode = engineData->bDebugMode;
         LobbyData* lobbyData = loadLobbySettings(config);
 
+        Logging::Logger logger("DX9", engineData->bDebugMode);
+        MainPatch::startupMessage();
+
+        //logger.debug() << "Writing engine INI: " << engineINI << std::endl;
+        logger.debug("Setting engine INI");
         setEngineData(engineINI, engineData);
 
+        getGameDirectory(hm, path, MAX_PATH, "\\bin\\__config_cache", 1);
+        memcpy_s(cameraData->VkConfigPath, MAX_PATH, path, MAX_PATH);
+        //logger.debug() << "Vk config cache location: " << path << std::endl;
+
+        // on Linux we use d3d9 provided by the system
+        if (engineData->bNativeDX || isWine()) {
+            logger.info() << "Using system DX9: ";
+
+            GetSystemDirectory(path, MAX_PATH);
+            strcat_s(path, "\\d3d9.dll");
+
+            if (engineData->fpsLimit > 0) {
+                bFPSLimit = true;
+                fFPSLimit = engineData->fpsLimit;
+            }
+            else {
+                bFPSLimit = false;
+            }
+        }
+        else {
+            logger.info() << "Using shipped DX9: ";
+
+            SetEnvironmentVariable("DXVK_LOG_LEVEL", "none");
+            SetEnvironmentVariable("DXVK_CONFIG_FILE", path);
+
+            logger.debug("Writing Vk config cache");
+            initDXconfig(path, engineData);
+
+            getGameDirectory(hm, path, MAX_PATH, "\\bin\\d3d9vk.dll", 1);
+
+            bFPSLimit = false;
+        }
+
         if (cameraData->bEnabled)
-            CreateThread(0, 0, ZoomPatchThread, cameraData, 0, 0);
+            CreateThread(0, 0, MainPatchThread, cameraData, 0, 0);
 
+        // disabled for now
         //if (lobbyData->bEnabled)
-        if (false) // disabled for now
-            CreateThread(0, 0, LobbyPatchThread, lobbyData, 0, 0);
+        //    CreateThread(0, 0, LobbyPatchThread, lobbyData, 0, 0);
 
-        fFPSLimit = static_cast<float>(engineData->fpsLimit);
+        logger.naked(path);
 
-        if (fFPSLimit)
-            bFPSLimit = true;
-
-
-        GetSystemDirectory(path, MAX_PATH);
-        strcat_s(path, "\\d3d9.dll");
         d3d9.dll = LoadLibrary(path);
         d3d9.D3DPERF_BeginEvent = (LPD3DPERF_BEGINEVENT)GetProcAddress(d3d9.dll, "D3DPERF_BeginEvent");
         d3d9.D3DPERF_EndEvent = (LPD3DPERF_ENDEVENT)GetProcAddress(d3d9.dll, "D3DPERF_EndEvent");
@@ -281,9 +304,9 @@ bool WINAPI DllMain(HMODULE hModule, DWORD fdwReason, LPVOID lpReserved) {
         break;
     }
     case DLL_PROCESS_DETACH:
-        TerminateProcess(bridgeProcessInfo.hProcess, 0);
-        CloseHandle(bridgeProcessInfo.hProcess);
-        CloseHandle(bridgeProcessInfo.hThread);
+        //TerminateProcess(bridgeProcessInfo.hProcess, 0);
+        //CloseHandle(bridgeProcessInfo.hProcess);
+        //CloseHandle(bridgeProcessInfo.hThread);
 
         FreeLibrary(hModule);
         break;
@@ -976,7 +999,48 @@ HRESULT f_IDirect3DDevice9::GetSamplerState(THIS_ DWORD Sampler, D3DSAMPLERSTATE
 
 HRESULT f_IDirect3DDevice9::SetSamplerState(THIS_ DWORD Sampler, D3DSAMPLERSTATETYPE Type, DWORD Value)
 {
+    const int maxAnisotropy = 16;
+
+    if (Type == D3DSAMP_MAXANISOTROPY)
+        return f_pD3DDevice->SetSamplerState(Sampler, Type, maxAnisotropy);
+    else
+        return f_pD3DDevice->SetSamplerState(Sampler, Type, Value);
+
+    /*
+    if (Type == D3DSAMP_MAXANISOTROPY) {
+        return f_pD3DDevice->SetSamplerState(Sampler, Type, maxAnisotropy);
+
+    } else if (Value == D3DTEXF_LINEAR) {
+        f_pD3DDevice->SetSamplerState(Sampler, D3DSAMP_MAXANISOTROPY, maxAnisotropy);
+
+        return f_pD3DDevice->SetSamplerState(Sampler, Type, D3DTEXF_ANISOTROPIC);
+    }
+
     return f_pD3DDevice->SetSamplerState(Sampler, Type, Value);
+    */
+    /*
+    // Setup Anisotropy Filtering
+    if (isoTropyFlag && (Type == D3DSAMP_MAXANISOTROPY || ((Type == D3DSAMP_MINFILTER || Type == D3DSAMP_MAGFILTER) && Value == D3DTEXF_LINEAR))) {
+        isoTropyFlag = false;
+        f_pD3DDevice->SetSamplerState(Sampler, D3DSAMP_MAXANISOTROPY, maxAnisotropy);
+    }
+
+    // Enable Anisotropic Filtering
+    if (Type == D3DSAMP_MAXANISOTROPY) {
+        if (f_pD3DDevice->SetSamplerState(Sampler, D3DSAMP_MAXANISOTROPY, maxAnisotropy) == D3D_OK) {
+            return D3D_OK;
+        }
+    } else if ((Type == D3DSAMP_MINFILTER || Type == D3DSAMP_MAGFILTER) && Value == D3DTEXF_LINEAR) {
+        if (f_pD3DDevice->SetSamplerState(Sampler, D3DSAMP_MAXANISOTROPY, maxAnisotropy) == D3D_OK
+            && f_pD3DDevice->SetSamplerState(Sampler, Type, D3DTEXF_ANISOTROPIC) == D3D_OK) {
+            return D3D_OK;
+        }
+    }
+    
+
+    if (Type == D3DSAMP_MAXANISOTROPY || ((Type == D3DSAMP_MINFILTER || Type == D3DSAMP_MAGFILTER) && Value == D3DTEXF_LINEAR)) {
+    }
+    */
 }
 
 HRESULT f_IDirect3DDevice9::SetDepthStencilSurface(THIS_ IDirect3DSurface9* pNewZStencil)

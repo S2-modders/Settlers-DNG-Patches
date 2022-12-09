@@ -4,18 +4,18 @@
  * This source code is licensed under GPL-v3
  *
  */
-
 #pragma once
-#include <Windows.h>
+#define WIN32_LEAN_AND_MEAN
 
-struct LobbyData {
-	bool bEnabled;
-	bool bTincatDebug;
-	bool bNetworkPatch;
-	bool bDebugMode;
-	const char* serverIP;
-	int patchlevel;
-};
+#include "Config.h"
+#include "Helper/Logger.h"
+
+#include "httplib/httplib.h"
+#include "SimpleIni/SimpleIni.h"
+
+#include <Windows.h>
+#include <sstream>
+#include <thread>
 
 extern PROCESS_INFORMATION bridgeProcessInfo;
 
