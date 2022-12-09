@@ -15,7 +15,7 @@ typedef std::ostream& (*Manip1)(std::ostream&);
 
 class Logger {
 public:
-	explicit Logger(char* module, bool debug = true) {
+	explicit Logger(char* module, bool debug = false) {
 		this->module = module;
 
 		if (debug) {
@@ -35,43 +35,35 @@ public:
 	}
 	
 	Logger& debug() {
-		this->level = "DEBUG";
-		std::cout << *this << "\t";
-		return *this;
+		return printSelf("DEBUG");
 	}
 	void debug(char* msg) {
 		debug() << msg << std::endl;
 	}
 
 	Logger& info() {
-		this->level = "INFO";
-		std::cout << *this << "\t";
-		return *this;
+		return printSelf("INFO");
 	}
 	void info(char* msg) {
 		info() << msg << std::endl;
 	}
 
 	Logger& warn() {
-		this->level = "WARN";
-		std::cout << *this << "\t";
-		return *this;
+		return printSelf("WARN");
 	}
 	void warn(char* msg) {
 		warn() << msg << std::endl;
 	}
 
 	Logger& error() {
-		this->level = "ERROR";
-		std::cout << *this << "\t";
-		return *this;
+		return printSelf("ERROR");
 	}
 	void error(char* msg) {
 		error() << msg << std::endl;
 	}
 
 	friend std::ostream& operator<<(std::ostream& out, const Logger& logger) {
-		out << "[" << logger.module << " | " << logger.level << "]";
+		out << "[" << logger.module << "] " << logger.level << ":";
 		return out;
 	}
 
@@ -80,4 +72,10 @@ private:
 	char* level = "DEBUG";
 
 	FILE* fp;
+
+	Logger& printSelf(char* level) {
+		this->level = level;
+		std::cout << *this << "\t";
+		return *this;
+	}
 };

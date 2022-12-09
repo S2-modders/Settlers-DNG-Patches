@@ -246,7 +246,7 @@ bool WINAPI DllMain(HMODULE hModule, DWORD fdwReason, LPVOID lpReserved) {
 
         getGameDirectory(hm, path, MAX_PATH, "\\bin\\__config_cache", 1);
         memcpy_s(cameraData->VkConfigPath, MAX_PATH, path, MAX_PATH);
-        log.debug() << "Vk config cache location: " << path << std::endl;
+        //log.debug() << "Vk config cache location: " << path << std::endl;
 
         // on Linux we use d3d9 provided by the system
         if (engineData->bNativeDX || isWine()) {
@@ -269,6 +269,7 @@ bool WINAPI DllMain(HMODULE hModule, DWORD fdwReason, LPVOID lpReserved) {
             SetEnvironmentVariable("DXVK_LOG_LEVEL", "none");
             SetEnvironmentVariable("DXVK_CONFIG_FILE", path);
 
+            log.debug("Writing Vk config cache");
             initDXconfig(path, engineData);
 
             getGameDirectory(hm, path, MAX_PATH, "\\bin\\d3d9vk.dll", 1);
