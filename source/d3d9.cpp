@@ -266,15 +266,19 @@ bool WINAPI DllMain(HMODULE hModule, DWORD fdwReason, LPVOID lpReserved) {
         else {
             logger.info() << "Using shipped DX9: ";
 
-            SetEnvironmentVariable("DXVK_LOG_LEVEL", "none");
-            SetEnvironmentVariable("DXVK_CONFIG_FILE", path);
-
-            logger.debug("Writing Vk config cache");
-            initDXconfig(path, engineData);
-
             getGameDirectory(hm, path, MAX_PATH, "\\bin\\d3d9vk.dll", 1);
 
             bFPSLimit = false;
+        }
+
+        logger.naked(path);
+
+        if (!engineData->bNativeDX || isWine()) {
+            SetEnvironmentVariable("DXVK_LOG_LEVEL", "none");
+            SetEnvironmentVariable("DXVK_CONFIG_FILE", cameraData->VkConfigPath);
+
+            logger.debug("Writing Vk config cache");
+            initDXconfig(cameraData->VkConfigPath, engineData);
         }
 
         if (cameraData->bEnabled)
@@ -283,8 +287,6 @@ bool WINAPI DllMain(HMODULE hModule, DWORD fdwReason, LPVOID lpReserved) {
         // disabled for now
         //if (lobbyData->bEnabled)
         //    CreateThread(0, 0, LobbyPatchThread, lobbyData, 0, 0);
-
-        logger.naked(path);
 
         d3d9.dll = LoadLibrary(path);
         d3d9.D3DPERF_BeginEvent = (LPD3DPERF_BEGINEVENT)GetProcAddress(d3d9.dll, "D3DPERF_BeginEvent");
