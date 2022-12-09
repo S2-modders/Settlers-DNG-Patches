@@ -171,7 +171,6 @@ MainPatch::MainPatch(PatchData& patchData, CameraData* cameraData) : patchData(p
 
 void MainPatch::startupMessage() {
     std::cout << "ZoomPatch & LobbyPatch by zocker_160 - Version: v" << version_maj << "." << version_min << "\n"
-        << "Debug mode enabled! \n"
         << "Waiting for application startup... \n"
         << std::endl;
 }
