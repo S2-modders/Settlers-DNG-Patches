@@ -16,6 +16,7 @@ struct EngineData {
 	bool bVSync;
     bool bNativeDX;
     bool bDebugMode;
+    bool bDebugWindow;
 	int refreshRate;
 	int fpsLimit;
     int MSAA;
@@ -37,6 +38,7 @@ struct CameraData {
     bool bEnabled;
     bool bWideView;
     bool bDebugMode;
+    bool bDebugWindow;
     float fZoomIncrement;
     char VkConfigPath[MAX_PATH];
 };

@@ -19,6 +19,7 @@ EngineData* loadEngineSettings(CSimpleIni& ini) {
 	eData->refreshRate = ini.GetLongValue("Game", "RefreshRate");
 
 	eData->bDebugMode = ini.GetBoolValue("Misc", "DebugMode");
+	eData->bDebugWindow = ini.GetBoolValue("Misc", "DebugWindow");
 
 	return eData;
 }

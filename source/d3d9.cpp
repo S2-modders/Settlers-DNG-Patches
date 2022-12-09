@@ -234,9 +234,10 @@ bool WINAPI DllMain(HMODULE hModule, DWORD fdwReason, LPVOID lpReserved) {
         EngineData* engineData = loadEngineSettings(config);
         CameraData* cameraData = loadCameraSettings(config);
         cameraData->bDebugMode = engineData->bDebugMode;
+        cameraData->bDebugWindow = engineData->bDebugWindow;
         LobbyData* lobbyData = loadLobbySettings(config);
 
-        Logging::Logger logger("DX9", engineData->bDebugMode);
+        Logging::Logger logger("DX9", engineData->bDebugWindow);
         MainPatch::startupMessage();
 
         //logger.debug() << "Writing engine INI: " << engineINI << std::endl;
