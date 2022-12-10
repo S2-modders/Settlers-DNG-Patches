@@ -259,7 +259,7 @@ bool WINAPI DllMain(HMODULE hModule, DWORD fdwReason, LPVOID lpReserved) {
 
             if (engineData->fpsLimit > 0) {
                 bFPSLimit = true;
-                fFPSLimit = engineData->fpsLimit;
+                fFPSLimit = (float)engineData->fpsLimit;
             }
             else {
                 bFPSLimit = false;
