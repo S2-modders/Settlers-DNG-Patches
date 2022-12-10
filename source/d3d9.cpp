@@ -241,7 +241,12 @@ bool WINAPI DllMain(HMODULE hModule, DWORD fdwReason, LPVOID lpReserved) {
         Logging::Logger logger("DX9", engineData->bDebugWindow);
         MainPatch::startupMessage();
 
-        //logger.debug() << "Writing engine INI: " << engineINI << std::endl;
+        int refreshRate = getDesktopRefreshRate();
+        engineData->fpsLimit = MainPatch::calcRefreshRate(engineData->fpsLimit);
+        logger.debug() << "Detected refresh rate: " << refreshRate << "Hz | "
+            << "Enforced fps limit: " << engineData->fpsLimit << "fps"
+            << std::endl;
+
         logger.debug("Setting engine INI");
         setEngineData(engineINI, engineData);
 

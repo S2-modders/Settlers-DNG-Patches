@@ -122,6 +122,18 @@ void getDesktopResolution2(int& hor, int& vert) {
     vert = GetSystemMetrics(SM_CYSCREEN);
 }
 
+int getDesktopRefreshRate() {
+    DEVMODE lpDevMode;
+    memset(&lpDevMode, 0, sizeof(lpDevMode));
+    lpDevMode.dmSize = sizeof(DEVMODE);
+    lpDevMode.dmDriverExtra = 0;
+
+    if (EnumDisplaySettings(NULL, ENUM_CURRENT_SETTINGS, &lpDevMode))
+        return lpDevMode.dmDisplayFrequency;
+    else
+        return 0;
+}
+
 float calcAspectRatio(int horizontal, int vertical) {
     if (horizontal > 0 && vertical > 0)
         return (float)horizontal / (float)vertical;

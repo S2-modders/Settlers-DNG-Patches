@@ -29,6 +29,8 @@ public:
 	int run();
 	static void startupMessage();
 
+    static int calcRefreshRate(int maxRefreshRate = 0);
+
 private:
     PatchData& patchData;
     CameraData* cameraData;

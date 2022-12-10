@@ -175,6 +175,30 @@ void MainPatch::startupMessage() {
         << std::endl;
 }
 
+int MainPatch::calcRefreshRate(int maxRefreshRate) {
+    // game is limited to 200 fps and causes issues above
+    // we need to calculate a forced fps limiter to prevent issues
+    int rr = getDesktopRefreshRate();
+    int newrr = min(maxRefreshRate, 200);
+
+    // detection failed if rr = 0
+    if (rr == 0)
+        return max(0, newrr);
+
+    // if user specified fps limit, then we use that
+    // unless it is higher than the refresh rate
+    if (newrr > 0 && newrr < rr)
+        return newrr;
+
+    // anything under 200Hz will get limited to (Hz - 1) fps
+    // anything over 200Hz will get limited to (Hz / 2) fps
+    if (rr > 200)
+        return rr / 2;
+    else
+        return max(rr - 1, 60); // do not go lower than 60fps
+
+}
+
 int MainPatch::run() {
     if (!isWorldObject())
         return 0;

@@ -25,6 +25,8 @@ bool functionInjector(void* toHook, void* function, int len);
 void getDesktopResolution(int& horizontal, int& vertical);
 void getDesktopResolution2(int& hor, int& vert);
 
+int getDesktopRefreshRate();
+
 void getGameDirectory(HMODULE hm, char* path, int size, char* location, int levels = 0);
 
 bool isKeyPressed(int vKey);
