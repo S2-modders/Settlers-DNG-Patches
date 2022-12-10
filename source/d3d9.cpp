@@ -283,8 +283,7 @@ bool WINAPI DllMain(HMODULE hModule, DWORD fdwReason, LPVOID lpReserved) {
             initDXconfig(cameraData->VkConfigPath, engineData);
         }
 
-        if (cameraData->bEnabled)
-            CreateThread(0, 0, MainPatchThread, cameraData, 0, 0);
+        CreateThread(0, 0, MainPatchThread, cameraData, 0, 0);
 
         // disabled for now
         //if (lobbyData->bEnabled)

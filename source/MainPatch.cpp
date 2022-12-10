@@ -203,7 +203,7 @@ bool MainPatch::isWorldObject() {
 }
 
 void MainPatch::patchCamera() {
-    if (*worldObj == 0)
+    if (*worldObj == 0 || !cameraData->bEnabled)
         return;
 
     maxZoom = (float*)tracePointer(&patchData.maxZoom);
