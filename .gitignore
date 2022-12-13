@@ -5,6 +5,7 @@ frps*
 frpc*
 _*
 
+*.exe
 *.yml
 *.zip
 *.dll
