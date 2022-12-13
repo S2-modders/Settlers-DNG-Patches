@@ -71,7 +71,8 @@ void setEngineData(char* iniPath, EngineData* eData) {
 	ini.SetLongValue("Engine", "hardwareCursor", (long)eData->bHardwareCursor);
 	//ini.SetLongValue("Engine", "vsync", (long)eData->bVSync);
 	ini.SetLongValue("Engine", "vsync", 0);
-	ini.SetLongValue("Engine", "refreshRate", (long)eData->refreshRate);
+	//ini.SetLongValue("Engine", "refreshRate", (long)eData->refreshRate);
+	ini.SetLongValue("Engine", "refreshRate", 0); // this setting causes more problems than it solves
 
 	ini.SaveFile(iniPath);
 }
