@@ -242,7 +242,7 @@ bool WINAPI DllMain(HMODULE hModule, DWORD fdwReason, LPVOID lpReserved) {
         MainPatch::startupMessage();
 
         int refreshRate = getDesktopRefreshRate();
-        engineData->fpsLimit = MainPatch::calcRefreshRate(engineData->fpsLimit);
+        engineData->fpsLimit = MainPatch::calcRefreshRate(engineData->fpsLimit, engineData->bVSync);
         logger.debug() << "Detected refresh rate: " << refreshRate << "Hz | "
             << "Enforced fps limit: " << engineData->fpsLimit << "fps"
             << std::endl;

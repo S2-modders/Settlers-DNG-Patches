@@ -29,7 +29,7 @@ public:
 	int run();
 	static void startupMessage();
 
-    static int calcRefreshRate(int maxRefreshRate = 0);
+    static int calcRefreshRate(int maxRefreshRate = 0, bool vSync = true);
 
 private:
     PatchData& patchData;
