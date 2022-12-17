@@ -10,8 +10,8 @@
 #include "Helper/Helper.h"
 #include "Helper/Logger.h"
 
-//#include "Lobby.h"
 #include "Config.h"
+#include "Lobby.h"
 #include "MainPatch.h"
 
 #include "SimpleIni/SimpleIni.h"
@@ -234,9 +234,13 @@ bool WINAPI DllMain(HMODULE hModule, DWORD fdwReason, LPVOID lpReserved) {
 
         EngineData* engineData = loadEngineSettings(config);
         CameraData* cameraData = loadCameraSettings(config);
-        cameraData->bDebugMode = engineData->bDebugMode;
-        cameraData->bDebugWindow = engineData->bDebugWindow;
         LobbyData* lobbyData = loadLobbySettings(config);
+
+        auto* settings = new PatchSettings;
+        settings->gameVersion = V_UNKNOWN;
+        settings->engineData = engineData;
+        settings->cameraData = cameraData;
+        settings->lobbyData = lobbyData;
 
         Logging::Logger logger("DX9", engineData->bDebugWindow);
         MainPatch::startupMessage();
@@ -249,6 +253,11 @@ bool WINAPI DllMain(HMODULE hModule, DWORD fdwReason, LPVOID lpReserved) {
 
         logger.debug("Setting engine INI");
         setEngineData(engineINI, engineData);
+
+        if (lobbyData->bEnabled) {
+            logger.debug("Setting network INI");
+            setNetworkData(networkINI, lobbyData);
+        }
 
         getGameDirectory(hm, path, MAX_PATH, "\\bin\\__config_cache", 1);
         memcpy_s(cameraData->VkConfigPath, MAX_PATH, path, MAX_PATH);
@@ -288,11 +297,10 @@ bool WINAPI DllMain(HMODULE hModule, DWORD fdwReason, LPVOID lpReserved) {
             initDXconfig(cameraData->VkConfigPath, engineData);
         }
 
-        CreateThread(0, 0, MainPatchThread, cameraData, 0, 0);
+        CreateThread(0, 0, MainPatchThread, settings, 0, 0);
 
-        // disabled for now
-        //if (lobbyData->bEnabled)
-        //    CreateThread(0, 0, LobbyPatchThread, lobbyData, 0, 0);
+        if (lobbyData->bEnabled)
+            CreateThread(0, 0, LobbyPatchThread, settings, 0, 0);
 
         d3d9.dll = LoadLibrary(path);
         d3d9.D3DPERF_BeginEvent = (LPD3DPERF_BEGINEVENT)GetProcAddress(d3d9.dll, "D3DPERF_BeginEvent");

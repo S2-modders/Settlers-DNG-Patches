@@ -50,14 +50,14 @@ LobbyData* loadLobbySettings(CSimpleIni& ini) {
 	auto* lData = new LobbyData;
 
 	lData->bEnabled = ini.GetBoolValue("Lobby", "enabled", false);
-	/*
-	lData->serverIP = new char[100];
-	const char* _sip = ini.GetValue("Lobby", "ServerIP", "www.diesiedler2lobby.de:8777");
-	strncpy_s(lData->serverIP, 100, _sip, 100);
-	*/
-	lData->serverIP = ini.GetValue("Lobby", "ServerIP", "www.diesiedler2lobby.de:8777");
-	lData->patchlevel = ini.GetLongValue("Lobby", "PatchLevel", 9212);
-	lData->bDebugMode = ini.GetBoolValue("Lobby", "DebugMode");
+	ServerAddr addr = {
+		ini.GetValue("Lobby", "ServerIP", "www.diesiedler2lobby.de"),
+		(unsigned int)ini.GetLongValue("Lobby", "ServerPort", 8777)
+	};
+	lData->serverAddr = addr;
+	lData->patchLevel = ini.GetLongValue("Lobby", "PatchLevel", 9212);
+	lData->bTincatDebug = ini.GetBoolValue("Lobby", "DebugMode");
+	lData->gamePort = 5479; // config option possible but IMO not needed
 
 	return lData;
 }
@@ -78,17 +78,16 @@ void setEngineData(char* iniPath, EngineData* eData) {
 }
 
 
-void setNetworkData(char* iniPath, NetworkData* nData) {
+void setNetworkData(char* iniPath, LobbyData* lData) {
 	CSimpleIni ini;
 	ini.SetUnicode();
 	ini.LoadFile(iniPath);
 
+	ini.SetLongValue("Basics", "gamePort", (long)lData->gamePort);
 	std::stringstream ss;
-	ss << nData->serverAddr.IP << ":" << nData->serverAddr.Port;
-
-	ini.SetLongValue("Basics", "gamePort", (long)nData->gamePort);
+	ss << lData->serverAddr.IP << ":" << lData->serverAddr.Port;
 	ini.SetValue("Lobby", "url", ss.str().c_str());
-	ini.SetLongValue("Lobby", "patchlevel", (long)nData->patchLevel);
+	ini.SetLongValue("Lobby", "patchlevel", (long)lData->patchLevel);
 
 	ini.SaveFile(iniPath);
 }

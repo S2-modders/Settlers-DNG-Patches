@@ -21,6 +21,9 @@ DWORD LoggerAddr2 = 0x751E;
 
 DWORD CreateGamePayloadPortHook = 0x60FA;
 
+const int retryCount = 10;
+const int retryTimeout = 1000;
+
 LobbyData* lobbyData;
 unsigned int bridgePort;
 
@@ -113,7 +116,23 @@ void __declspec(naked) jumperFunction() {
 	}
 }
 
-void setTincatDebugMode() {
+LobbyPatch::LobbyPatch(PatchSettings* settings) {
+	this->settings = settings;
+}
+
+int LobbyPatch::run() {
+	logger.info("LobbyPatch started");
+
+	if (settings->lobbyData->bTincatDebug)
+		setTincatDebugMode();
+
+	//hookCreateGameServerPayload();
+	//patchLobbyFilter();
+
+	return 0;
+}
+
+void LobbyPatch::setTincatDebugMode() {
 	logger.debug("Patching Lobby Debug mode");
 	short lobbyDebug = 0x11EB;
 
@@ -124,51 +143,43 @@ void setTincatDebugMode() {
 	writeBytes(lobby2, &lobbyDebug, 2);
 }
 
-void setNetworking(LobbyData* tData) {
-	logger.debug("Patching network.ini");
-	char iniPath[MAX_PATH];
+void LobbyPatch::hookCreateGameServerPayload() {
+	DWORD hookAddr = (DWORD)getMatchmakingAddress() + CreateGamePayloadPortHook;
+	functionInjectorReturn((DWORD*)hookAddr, jumperFunction, jmpBackAddr, 9);
 
-	GetCurrentDirectoryA(MAX_PATH, iniPath);
-	strcat_s(iniPath, "\\data\\settings\\network.ini");
+	/*
+	 * old inject CreateGameServerPayload
+	 * 
+	int hookLength = 9;
+	DWORD hookAddr = (DWORD)getMatchmakingAddress() + CreateGamePayloadPortHook;
+	jmpBackAddr = hookAddr + hookLength;
 
-	CSimpleIniA ini;
-	ini.SetUnicode();
-	ini.LoadFile(iniPath);
-	ini.SetValue("Lobby", "url", (const char*)tData->serverIP);
-	ini.SetLongValue("Lobby", "patchlevel", (long)tData->patchlevel);
-	ini.SaveFile(iniPath);
+	functionInjector((DWORD*)hookAddr, jumperFunction, hookLength);
+	*/
 }
 
-int LobbyPatch(LobbyData* tData) {
-	Sleep(500);
-	FILE* f;
-	lobbyData = tData;
 
-	if (tData->bDebugMode) {
-		AllocConsole();
-		freopen_s(&f, "CONOUT$", "w", stdout);
+int prepareLobby(PatchSettings* settings) {
+	Sleep(startupDelay+500);
+
+	while (settings->gameVersion == V_UNKNOWN) {
+		logger.info("Version check retrying...");
+		Sleep(retryTimeout);
 	}
 
-	/* patch network.ini */
-	if (tData->bNetworkPatch)
-		setNetworking(tData);
+	switch (settings->gameVersion) {
+	case V_BASE_GOG:
+		return LobbyPatch(settings).run();
+		break;
 
-	/* patch lobby / tincat debug mode */
-	if (tData->bDebugMode)
-		setTincatDebugMode();
-
-	/* inject CreateGameServerPayload */
-	{
-		int hookLength = 9;
-		DWORD hookAddr = (DWORD)getMatchmakingAddress() + CreateGamePayloadPortHook;
-		jmpBackAddr = hookAddr + hookLength;
-
-		functionInjector((DWORD*)hookAddr, jumperFunction, hookLength);
+	default:
+		logger.info("Lobby patch disabled for this version");
+		break;
 	}
 
 	return 0;
-};
+}
 
 DWORD WINAPI LobbyPatchThread(LPVOID param) {
-	return LobbyPatch(reinterpret_cast<LobbyData*>(param));
+	return prepareLobby(reinterpret_cast<PatchSettings*>(param));
 }

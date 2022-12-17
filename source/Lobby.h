@@ -17,6 +17,20 @@
 #include "httplib/httplib.h"
 #include "SimpleIni/SimpleIni.h"
 
+
 extern PROCESS_INFORMATION bridgeProcessInfo;
 
 DWORD WINAPI LobbyPatchThread(LPVOID param);
+
+class LobbyPatch {
+public:
+	explicit LobbyPatch(PatchSettings* settings);
+
+	int run();
+private:
+	PatchSettings* settings;
+
+	void hookCreateGameServerPayload();
+	void setTincatDebugMode();
+	void patchLobbyFilter();
+};

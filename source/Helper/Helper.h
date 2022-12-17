@@ -20,7 +20,9 @@ HMODULE getMatchmakingAddress();
 DWORD* calcAddress(DWORD appl_addr);
 DWORD* tracePointer(memoryPTR* patch);
 
+void nopper(void* startAddr, int len);
 bool functionInjector(void* toHook, void* function, int len);
+bool functionInjectorReturn(void* hookAddr, void* function, DWORD& returnAddr, int len);
 
 void getDesktopResolution(int& horizontal, int& vertical);
 void getDesktopResolution2(int& hor, int& vert);
