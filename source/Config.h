@@ -5,11 +5,11 @@
  */
 #pragma once
 
-#include "Helper/Helper.h"
-#include "SimpleIni/SimpleIni.h"
-
 #include <sstream>
 #include <fstream>
+
+#include "Helper/Helper.h"
+#include "SimpleIni/SimpleIni.h"
 
 struct EngineData {
 	bool bHardwareCursor;

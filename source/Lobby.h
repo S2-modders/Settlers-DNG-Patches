@@ -7,15 +7,15 @@
 #pragma once
 #define WIN32_LEAN_AND_MEAN
 
+#include <Windows.h>
+#include <sstream>
+#include <thread>
+
 #include "Config.h"
 #include "Helper/Logger.h"
 
 #include "httplib/httplib.h"
 #include "SimpleIni/SimpleIni.h"
-
-#include <Windows.h>
-#include <sstream>
-#include <thread>
 
 extern PROCESS_INFORMATION bridgeProcessInfo;
 
