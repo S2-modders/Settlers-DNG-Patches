@@ -33,7 +33,6 @@ struct EngineData {
     bool bNativeDX;
     bool bDebugMode;
     bool bDebugWindow;
-    int refreshRate;
     int fpsLimit;
     int MSAA;
     int Anisotropy;

@@ -246,7 +246,7 @@ bool WINAPI DllMain(HMODULE hModule, DWORD fdwReason, LPVOID lpReserved) {
         MainPatch::startupMessage();
 
         int refreshRate = getDesktopRefreshRate();
-        engineData->fpsLimit = MainPatch::calcRefreshRate(engineData->fpsLimit, engineData->bVSync);
+        engineData->fpsLimit = MainPatch::calcMaxFramerate(engineData->fpsLimit, engineData->bVSync);
         logger.debug() << "Detected refresh rate: " << refreshRate << "Hz | "
             << "Enforced fps limit: " << engineData->fpsLimit << "fps"
             << std::endl;
@@ -283,13 +283,13 @@ bool WINAPI DllMain(HMODULE hModule, DWORD fdwReason, LPVOID lpReserved) {
             logger.info() << "Using shipped DX9: ";
 
             getGameDirectory(hm, path, MAX_PATH, "\\bin\\d3d9vk.dll", 1);
-
-            bFPSLimit = false;
         }
 
         logger.naked(path);
 
         if (!engineData->bNativeDX || isWine()) {
+            bFPSLimit = false;
+
             SetEnvironmentVariable("DXVK_LOG_LEVEL", "none");
             SetEnvironmentVariable("DXVK_CONFIG_FILE", cameraData->VkConfigPath);
 

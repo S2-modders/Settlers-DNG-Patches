@@ -16,7 +16,6 @@ EngineData* loadEngineSettings(CSimpleIni& ini) {
 	eData->MSAA = ini.GetLongValue("Game", "ForceMSAA", 4);
 	eData->Anisotropy = ini.GetLongValue("Game", "ForceAnisotropy", 16);
 	eData->bNativeDX = ini.GetBoolValue("Game", "ForceNativeDX");
-	eData->refreshRate = ini.GetLongValue("Game", "RefreshRate");
 
 	eData->bDebugMode = ini.GetBoolValue("Misc", "DebugMode");
 	eData->bDebugWindow = ini.GetBoolValue("Misc", "DebugWindow");
@@ -98,7 +97,7 @@ void initDXconfig(char* path, EngineData* eData) {
 
 	std::ofstream ofstr(path);
 
-	ofstr << "d3d9.maxFrameRate = " << eData->refreshRate << std::endl;
+	ofstr << "d3d9.maxFrameRate = " << eData->fpsLimit << std::endl;
 	ofstr << "d3d9.forceSwapchainMSAA = " << eData->MSAA << std::endl;
 	ofstr << "d3d9.samplerAnisotropy = " << eData->Anisotropy << std::endl;
 	ofstr << "d3d9.presentInterval = " << (eData->bVSync ? 1 : 0) << std::endl;

@@ -178,11 +178,11 @@ void MainPatch::startupMessage() {
         << std::endl;
 }
 
-int MainPatch::calcRefreshRate(int maxRefreshRate, bool vSync) {
+int MainPatch::calcMaxFramerate(int maxFrameRate, bool vSync) {
     // game is limited to 200 fps and causes issues above
     // we need to calculate a forced fps limiter to prevent issues
     int rr = getDesktopRefreshRate();
-    int newrr = min(maxRefreshRate, 200);
+    int newrr = min(maxFrameRate, 200);
 
     // detection failed if rr = 0
     if (rr == 0)

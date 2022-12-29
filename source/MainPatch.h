@@ -15,7 +15,7 @@
 #include "Helper/Logger.h"
 
 const int version_maj = 1;
-const int version_min = 7;
+const int version_min = 8;
 
 
 struct PatchData {
@@ -37,7 +37,7 @@ public:
 	int run();
 	static void startupMessage();
 
-    static int calcRefreshRate(int maxRefreshRate = 0, bool vSync = true);
+    static int calcMaxFramerate(int maxFrameRate = 0, bool vSync = true);
 
 private:
     PatchData& patchData;
