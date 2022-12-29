@@ -15,25 +15,33 @@
 #include "Helper/Logger.h"
 
 const int version_maj = 1;
-const int version_min = 7;
+const int version_min = 8;
 
-const int retryCount = 4;
-const int retryTimeout = 2000;
+
+struct PatchData {
+    memoryPTR worldObject;
+    memoryPTR maxZoom;
+    memoryPTR currZoom;
+    DWORD lobbyVersionFilterAddr;
+    DWORD gameVersionAddr;
+    DWORD zoomIncrAddr;
+    DWORD zoomDecrAddr;
+};
 
 DWORD WINAPI MainPatchThread(LPVOID param);
 
 class MainPatch {
 public:
-	explicit MainPatch(PatchData& patchData, CameraData* cameraData);
+	explicit MainPatch(PatchData& patchData, PatchSettings* settings);
 
 	int run();
 	static void startupMessage();
 
-    static int calcRefreshRate(int maxRefreshRate = 0, bool vSync = true);
+    static int calcMaxFramerate(int maxFrameRate = 0, bool vSync = true);
 
 private:
     PatchData& patchData;
-    CameraData* cameraData;
+    PatchSettings* settings;
 
     float* worldObj;
     float* maxZoom;

@@ -54,26 +54,42 @@ DWORD* tracePointer(memoryPTR* patch) {
     return location;
 }
 
-bool functionInjector(void* hookAddr, void* function, int len) {
+void nopper(void* startAddr, int len) {
+    BYTE nop = 0x90;
+    for (int i = 0; i < len; i++)
+        writeBytes((DWORD*)((DWORD)startAddr + i), &nop, 1);
+}
 
+bool functionInjector(void* hookAddr, void* function, int len) {
     if (len < 5)
         return false;
 
-    byte nop = 0x90;
-    byte jmp = 0xE9;
+    BYTE jmp = 0xE9;
     DWORD relAddr = ((DWORD)function - (DWORD)hookAddr) - 5;
 
     /* NOP needed area */
-    for (int i = 0; i < len; i++) {
-        writeBytes((DWORD*)((DWORD)hookAddr + i), &nop, 1);
-    }
+    nopper(hookAddr, len);
 
     writeBytes(hookAddr, &jmp, 1);
     writeBytes((DWORD*)((DWORD)hookAddr + 1), &relAddr, 4);
 
     return true;
 }
+bool functionInjectorReturn(void* hookAddr, void* function, DWORD& returnAddr, int len) {
+    if (len < 5)
+        return false;
 
+    BYTE jmp = 0xE9;
+    DWORD relAddr = ((DWORD)function - (DWORD)hookAddr) - 5;
+    returnAddr = (DWORD)hookAddr + len;
+
+    nopper(hookAddr, len);
+
+    writeBytes(hookAddr, &jmp, 1);
+    writeBytes((DWORD*)((DWORD)hookAddr + 1), &relAddr, 4);
+
+    return true;
+}
 
 /* logging stuff */
 void showMessage(float val) {

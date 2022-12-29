@@ -12,6 +12,9 @@ namespace MainPatch_Logger {
 }
 using MainPatch_Logger::logger;
 
+const int retryCount = 4;
+const int retryTimeout = 2000;
+
  /* 
  * memory values 
  */
@@ -164,9 +167,9 @@ namespace Addon_Gold {
 
 
 
-MainPatch::MainPatch(PatchData& patchData, CameraData* cameraData) : patchData(patchData) {
-    this->cameraData = cameraData;
-    this->zoomStep_p = &cameraData->fZoomIncrement;
+MainPatch::MainPatch(PatchData& patchData, PatchSettings* settings) : patchData(patchData) {
+    this->settings = settings;
+    this->zoomStep_p = &settings->cameraData->fZoomIncrement;
 }
 
 void MainPatch::startupMessage() {
@@ -175,11 +178,11 @@ void MainPatch::startupMessage() {
         << std::endl;
 }
 
-int MainPatch::calcRefreshRate(int maxRefreshRate, bool vSync) {
+int MainPatch::calcMaxFramerate(int maxFrameRate, bool vSync) {
     // game is limited to 200 fps and causes issues above
     // we need to calculate a forced fps limiter to prevent issues
     int rr = getDesktopRefreshRate();
-    int newrr = min(maxRefreshRate, 200);
+    int newrr = min(maxFrameRate, 200);
 
     // detection failed if rr = 0
     if (rr == 0)
@@ -202,7 +205,8 @@ int MainPatch::calcRefreshRate(int maxRefreshRate, bool vSync) {
 int MainPatch::run() {
     if (!isWorldObject())
         return 0;
-
+    
+    logger.info("MainPatch started");
     //patchLobbyFilter();
 
     for (;; Sleep(1000)) {
@@ -227,13 +231,13 @@ bool MainPatch::isWorldObject() {
 }
 
 void MainPatch::patchCamera() {
-    if (*worldObj == 0 || !cameraData->bEnabled)
+    if (*worldObj == 0 || !settings->cameraData->bEnabled)
         return;
 
     maxZoom = (float*)tracePointer(&patchData.maxZoom);
 
     if (calcZoomValue() && *maxZoom != newZoomValue) {
-        if (cameraData->bWideView)
+        if (settings->cameraData->bWideView)
             logger.debug("WideView enabled");
         else
             logger.debug("WideView disabled");
@@ -272,7 +276,7 @@ bool MainPatch::calcZoomValue() {
         return false;
     }
 
-    if (cameraData->bWideView) {
+    if (settings->cameraData->bWideView) {
         if (aspr < 1.5f)
             newZoomValue = 5.0f;
         else if (aspr < 1.9f)
@@ -308,7 +312,7 @@ bool MainPatch::calcZoomValue() {
 }
 
 void MainPatch::doDebug() {
-    if (!cameraData->bDebugMode)
+    if (!settings->engineData->bDebugMode)
         return;
 
     if (isKeyPressed(VK_F3)) {
@@ -378,15 +382,15 @@ bool isSettlersVersion(char* versionString) {
 }
 
 
-int prepare(CameraData* cData) {
+int prepareMain(PatchSettings* settings) {
     /* wait a bit for the application to start up (might crash otherwise) */
-    Sleep(4000);
+    Sleep(startupDelay);
 
     // delete temporary VK config file after a few seconds
     std::thread rmThread([](char* VkPath, int sleep = 1e4) {
         Sleep(sleep);
         remove(VkPath);
-    }, cData->VkConfigPath);
+    }, settings->cameraData->VkConfigPath);
     rmThread.detach();
 
     /* check if gameVersion is supported */
@@ -404,19 +408,23 @@ int prepare(CameraData* cData) {
 
             if (isSettlersVersion(sBase)) {
                 logger.info("Found Base GOG version");
-                return MainPatch(Base_GOG::patchData, cData).run();
+                settings->gameVersion = V_BASE_GOG;
+                return MainPatch(Base_GOG::patchData, settings).run();
             }
             else if (isSettlersVersion(sBaseGold)) {
                 logger.info("Found Base Gold Edition version");
-                return MainPatch(Base_Gold::patchData, cData).run();
+                settings->gameVersion = V_BASE_GOLD;
+                return MainPatch(Base_Gold::patchData, settings).run();
             }
             else if (isSettlersVersion(sAddon)) {
                 logger.info("Found Addon version");
-                return MainPatch(Addon::patchData, cData).run();
+                settings->gameVersion = V_ADDON;
+                return MainPatch(Addon::patchData, settings).run();
             }
             else if (isSettlersVersion(sAddonGold)) {
                 logger.info("Found Addon Gold Edition");
-                return MainPatch(Addon_Gold::patchData, cData).run();
+                settings->gameVersion = V_ADDON_GOLD;
+                return MainPatch(Addon_Gold::patchData, settings).run();
             }
         }
 
@@ -439,5 +447,5 @@ int prepare(CameraData* cData) {
 }
 
 DWORD WINAPI MainPatchThread(LPVOID param) {
-    return prepare(reinterpret_cast<CameraData*>(param));
+    return prepareMain(reinterpret_cast<PatchSettings*>(param));
 }
