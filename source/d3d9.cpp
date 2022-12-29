@@ -299,8 +299,8 @@ bool WINAPI DllMain(HMODULE hModule, DWORD fdwReason, LPVOID lpReserved) {
 
         CreateThread(0, 0, MainPatchThread, settings, 0, 0);
 
-        if (lobbyData->bEnabled)
-            CreateThread(0, 0, LobbyPatchThread, settings, 0, 0);
+        //if (lobbyData->bEnabled)
+        //    CreateThread(0, 0, LobbyPatchThread, settings, 0, 0);
 
         d3d9.dll = LoadLibrary(path);
         d3d9.D3DPERF_BeginEvent = (LPD3DPERF_BEGINEVENT)GetProcAddress(d3d9.dll, "D3DPERF_BeginEvent");
