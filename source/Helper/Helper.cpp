@@ -176,6 +176,32 @@ bool isWine() {
     return ntdllMod && GetProcAddress(ntdllMod, "wine_get_version");
 }
 
+bool isVulkanSupported() {
+    HMODULE vk = LoadLibraryA("vulkan-1.dll");
+    if (!vk)
+        return false; // Vulkan drivers not installed
+
+    typedef VOID*(WINAPI* VK_GETINSTANCE_PROC)(void*, const char*);
+    typedef INT(WINAPI* VK_CREATE_INSTANCE)(int*, void*, void**);
+
+    auto vkGetInstanceProcAddr = (VK_GETINSTANCE_PROC)GetProcAddress(vk, "vkGetInstanceProcAddr");
+    if (!vkGetInstanceProcAddr)
+        return false; // Vulkan is malfunctioning (vkGetInstanceProcAddr)
+
+    auto vkCreateInstance = (VK_CREATE_INSTANCE)vkGetInstanceProcAddr(0, "vkCreateInstance");
+    if (!vkCreateInstance)
+        return false; // Vulkan is malfunctioning (vkCreateInstance)
+
+    void* instance = 0;
+    int dummyInt[16] = { 1 };
+    int result = vkCreateInstance(dummyInt, 0, &instance);
+
+    if (!instance || result != 0)
+        return false; // Vulkan drivers installed and functioning, but are incompatible. An instance could not be created
+
+    return true;
+}
+
 void getGameDirectory(HMODULE hm, char* path, int size, char* loc, int levels) {
     GetModuleFileName(hm, path, size);
 

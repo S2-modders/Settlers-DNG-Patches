@@ -34,6 +34,7 @@ void getGameDirectory(HMODULE hm, char* path, int size, char* location, int leve
 bool isKeyPressed(int vKey);
 
 bool isWine();
+bool isVulkanSupported();
 
 float calcAspectRatio();
 float calcAspectRatio(int horizontal, int vertical);

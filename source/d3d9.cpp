@@ -259,13 +259,18 @@ bool WINAPI DllMain(HMODULE hModule, DWORD fdwReason, LPVOID lpReserved) {
             setNetworkData(networkINI, lobbyData);
         }
 
+        if (isVulkanSupported())
+            logger.debug("Vulkan supported!");
+        else
+            logger.debug("Vulkan NOT supported!");
+
         getGameDirectory(hm, path, MAX_PATH, "\\bin\\__config_cache", 1);
         memcpy_s(cameraData->VkConfigPath, MAX_PATH, path, MAX_PATH);
         memcpy_s(VkConfigPath, MAX_PATH, path, MAX_PATH);
         //logger.debug() << "Vk config cache location: " << path << std::endl;
 
         // on Linux we use d3d9 provided by the system
-        if (engineData->bNativeDX || isWine()) {
+        if (engineData->bNativeDX || isWine() || !isVulkanSupported()) {
             logger.info() << "Using system DX9: ";
 
             GetSystemDirectory(path, MAX_PATH);
