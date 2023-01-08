@@ -15,7 +15,7 @@
 #include "Helper/Logger.h"
 
 const int version_maj = 1;
-const int version_min = 8;
+const int version_min = 9;
 
 
 struct PatchData {
