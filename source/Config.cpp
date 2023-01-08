@@ -64,23 +64,23 @@ LobbyData* loadLobbySettings(CSimpleIni& ini) {
 
 void setEngineData(char* iniPath, EngineData* eData) {
 	CSimpleIni ini;
-	ini.SetUnicode();
-	ini.LoadFile(iniPath);
+	ini.SetUnicode(false);
 
 	ini.SetLongValue("Engine", "hardwareCursor", (long)eData->bHardwareCursor);
 	//ini.SetLongValue("Engine", "vsync", (long)eData->bVSync);
 	ini.SetLongValue("Engine", "vsync", 0);
 	//ini.SetLongValue("Engine", "refreshRate", (long)eData->refreshRate);
 	ini.SetLongValue("Engine", "refreshRate", 0); // this setting causes more problems than it solves
+	ini.SetLongValue("Engine", "useMeshCache", 1);
 
+	remove(iniPath);
 	ini.SaveFile(iniPath);
 }
 
 
 void setNetworkData(char* iniPath, LobbyData* lData) {
 	CSimpleIni ini;
-	ini.SetUnicode();
-	ini.LoadFile(iniPath);
+	ini.SetUnicode(false);
 
 	ini.SetLongValue("Basics", "gamePort", (long)lData->gamePort);
 	std::stringstream ss;
@@ -88,6 +88,19 @@ void setNetworkData(char* iniPath, LobbyData* lData) {
 	ini.SetValue("Lobby", "url", ss.str().c_str());
 	ini.SetLongValue("Lobby", "patchlevel", (long)lData->patchLevel);
 
+	// set all the remaining default values
+	ini.SetLongValue("Broadcast", "broadcastPort", 6582);
+	ini.SetLongValue("Broadcast", "broadcastTimeout", 10000);
+
+	ini.SetDoubleValue("Ping", "pingFrequencyMenu", 10.0f);
+	ini.SetDoubleValue("Ping", "pingFrequencyGame", 2.5f);
+	
+	ini.SetDoubleValue("Reconnector", "timeHostWaitForClients", 30.0f);
+	ini.SetDoubleValue("Reconnector", "timeClientWaits", 3.0f);
+	ini.SetLongValue("Reconnector", "timesClientRetries", 5);
+	ini.SetDoubleValue("Reconnector", "timeClientWaitsFailed", 4.0f);
+
+	remove(iniPath);
 	ini.SaveFile(iniPath);
 }
 
