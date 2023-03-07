@@ -227,7 +227,9 @@ bool WINAPI DllMain(HMODULE hModule, DWORD fdwReason, LPVOID lpReserved) {
         char networkINI[MAX_PATH];
         getGameDirectory(hm, networkINI, MAX_PATH, "\\data\\settings\\network.ini", 1);
 
-        //MessageBoxA(NULL, engineINI, "TEST", MB_OK);
+        char logFile[MAX_PATH];
+        getGameDirectory(hm, logFile, MAX_PATH, "\\bin\\d3d9.log", 1);
+        remove(logFile);
 
         config.SetUnicode();
         config.LoadFile(path);
@@ -242,8 +244,10 @@ bool WINAPI DllMain(HMODULE hModule, DWORD fdwReason, LPVOID lpReserved) {
         settings->cameraData = cameraData;
         settings->lobbyData = lobbyData;
 
-        Logging::Logger logger("DX9", engineData->bDebugWindow);
+        Logging::Logger logger("DX9", logFile, engineData->bDebugWindow);
         MainPatch::startupMessage();
+
+        logger.debug(logFile);
 
         int refreshRate = getDesktopRefreshRate();
         engineData->fpsLimit = MainPatch::calcMaxFramerate(engineData->fpsLimit, engineData->bVSync);
@@ -271,7 +275,7 @@ bool WINAPI DllMain(HMODULE hModule, DWORD fdwReason, LPVOID lpReserved) {
 
         // on Linux we use d3d9 provided by the system
         if (engineData->bNativeDX || isWine() || !isVulkanSupported()) {
-            logger.info() << "Using system DX9: ";
+            logger.info("Using system DX9: ");
 
             GetSystemDirectory(path, MAX_PATH);
             strcat_s(path, "\\d3d9.dll");
@@ -285,7 +289,7 @@ bool WINAPI DllMain(HMODULE hModule, DWORD fdwReason, LPVOID lpReserved) {
             }
         }
         else {
-            logger.info() << "Using shipped DX9: ";
+            logger.info("Using shipped DX9: ");
 
             getGameDirectory(hm, path, MAX_PATH, "\\bin\\d3d9vk.dll", 1);
         }
