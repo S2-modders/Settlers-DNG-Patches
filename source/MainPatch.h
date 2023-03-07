@@ -32,10 +32,10 @@ DWORD WINAPI MainPatchThread(LPVOID param);
 
 class MainPatch {
 public:
-	explicit MainPatch(PatchData& patchData, PatchSettings* settings);
+    explicit MainPatch(PatchData& patchData, PatchSettings* settings);
 
-	int run();
-	static void startupMessage();
+    int run();
+    static void startupMessage();
 
     static int calcMaxFramerate(int maxFrameRate = 0, bool vSync = true);
 
