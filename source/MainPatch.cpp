@@ -209,15 +209,46 @@ int MainPatch::run() {
     logger.info("MainPatch started");
     //patchLobbyFilter();
 
+    
+
     for (;; Sleep(1000)) {
         worldObj = (float*)tracePointer(&patchData.worldObject);
 
         patchCamera();
 
         doDebug();
+
+        //setCursor();
     }
 }
 
+void MainPatch::setCursor() {
+        //auto handle = LoadImageA(hm, MAKEINTRESOURCEA(101), IMAGE_BITMAP, LR_DEFAULTSIZE, LR_DEFAULTSIZE, LR_DEFAULTCOLOR);
+    //auto hlol = FindResource(hm, MAKEINTRESOURCE(101), "PNG");
+    //auto handle = LoadResource(hm, hlol);
+    //auto handle = LoadCursor(hm, MAKEINTRESOURCE(101));
+
+    /*
+    ICONINFO fuck;
+    fuck.fIcon = false;
+    fuck.xHotspot = 0;
+    fuck.yHotspot = 0;
+    fuck.hbmMask = settings->bitmap;
+    fuck.hbmColor = settings->bitmap;
+
+    HCURSOR cursor = CreateIconIndirect(&fuck);
+    if (!cursor) {
+        logger.debug(" FUCK IconIndirect failed!");
+    }
+    else {
+        logger.debug("SetCursor()");
+        SetCursor(cursor);
+    }
+    */
+
+    logger.debug("SetCursor()");
+    SetCursor(settings->cursor);
+}
 
 bool MainPatch::isWorldObject() {
     float* tmp = (float*)calcAddress(patchData.worldObject.base_address);
@@ -380,7 +411,6 @@ bool isSettlersVersion(char* versionString) {
     return strcmp(gameVersion, versionBase) == 0
         || strcmp(gameVersion, versionAddon) == 0;
 }
-
 
 int prepareMain(PatchSettings* settings) {
     /* wait a bit for the application to start up (might crash otherwise) */

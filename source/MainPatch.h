@@ -15,7 +15,7 @@
 #include "Helper/Logger.h"
 
 const int version_maj = 1;
-const int version_min = 9;
+const int version_min = 10;
 
 
 struct PatchData {
@@ -60,4 +60,6 @@ private:
     bool calcZoomValue();
 
     void doDebug();
+
+    void setCursor();
 };

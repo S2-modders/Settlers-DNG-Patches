@@ -55,6 +55,7 @@ struct LobbyData {
 };
 
 struct PatchSettings {
+    HCURSOR cursor;
     GameVersion gameVersion;
     EngineData* engineData;
     CameraData* cameraData;

@@ -200,7 +200,33 @@ VOID WINAPI f_PSGPSampleTexture(class D3DFE_PROCESSVERTICES* a, unsigned int b, 
 Testing Ground
 *************************/
 
-void test() {
+HCURSOR test(HMODULE hm) {
+    auto handle = (HCURSOR)LoadImage(
+        hm, MAKEINTRESOURCE(207), IMAGE_CURSOR, LR_DEFAULTSIZE, LR_DEFAULTSIZE, LR_DEFAULTCOLOR);
+
+    //auto handle = LoadCursorFromFile("Z:\\GitHub\\Settlers-DNG-Patches\\data\\cursor.cur");
+    //auto handle = LoadCursor(hm, MAKEINTRESOURCE(207));
+
+    if (!handle) {
+        DWORD error = GetLastError();
+        LPSTR messageBuffer = nullptr;
+        size_t size = FormatMessageA(
+            FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, NULL, error, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), reinterpret_cast<LPSTR>(&messageBuffer), 0, NULL);
+
+        std::cout << "FUCK OFF: " << messageBuffer;
+
+        OutputDebugStringA(messageBuffer);
+        LocalFree(messageBuffer);
+
+        return NULL;
+    }
+    else {
+        std::cout << "WORKED!";
+
+        SetCursor(handle);
+
+        return handle;
+    }
 }
 
 /*************************
@@ -247,7 +273,13 @@ bool WINAPI DllMain(HMODULE hModule, DWORD fdwReason, LPVOID lpReserved) {
         Logging::Logger logger("DX9", logFile, engineData->bDebugWindow);
         MainPatch::startupMessage();
 
-        logger.debug(logFile);
+        if (engineData->bDebugWindow)
+            logger.info("logging to DebugWindow");
+        else
+            logger.info() << "logging to " << logFile << std::endl;
+
+        //auto cursor = test(hm);
+        //settings->cursor = cursor;
 
         int refreshRate = getDesktopRefreshRate();
         engineData->fpsLimit = MainPatch::calcMaxFramerate(engineData->fpsLimit, engineData->bVSync);
@@ -275,7 +307,7 @@ bool WINAPI DllMain(HMODULE hModule, DWORD fdwReason, LPVOID lpReserved) {
 
         // on Linux we use d3d9 provided by the system
         if (engineData->bNativeDX || isWine() || !isVulkanSupported()) {
-            logger.info("Using system DX9: ");
+            logger.info() << "Using system DX9: ";
 
             GetSystemDirectory(path, MAX_PATH);
             strcat_s(path, "\\d3d9.dll");
@@ -289,7 +321,7 @@ bool WINAPI DllMain(HMODULE hModule, DWORD fdwReason, LPVOID lpReserved) {
             }
         }
         else {
-            logger.info("Using shipped DX9: ");
+            logger.info() << "Using shipped DX9: ";
 
             getGameDirectory(hm, path, MAX_PATH, "\\bin\\d3d9vk.dll", 1);
         }
