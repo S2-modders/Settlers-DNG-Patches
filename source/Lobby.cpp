@@ -4,8 +4,19 @@
  * This source code is licensed under GPL-v3
  *
  */
+#include "utilities/httplib/httplib.h"
 
+#include <Windows.h>
+
+#include <sstream>
+#include <thread>
+
+#include "Config.h"
 #include "Lobby.h"
+
+#include "utilities/Helper/Helper.h"
+#include "utilities/Helper/Logger.h"
+#include "utilities/SimpleIni/SimpleIni.h"
 
 namespace Lobby_Logger {
     Logging::Logger logger("LOBBY");
@@ -26,6 +37,11 @@ const int retryTimeout = 1000;
 
 LobbyData* lobbyData;
 unsigned int bridgePort;
+
+
+HMODULE getMatchmakingAddress() {
+    return getModuleAddress("matchmaking.dll");
+}
 
 void requestRemotePort(const char* ip, int controllerPort) {
     logger.debug("Requesting remote Port");

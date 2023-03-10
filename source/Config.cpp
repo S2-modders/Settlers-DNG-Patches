@@ -5,6 +5,11 @@
  */
 #pragma once
 
+#include <sstream>
+#include <fstream>
+
+#include "utilities/Helper/Helper.h"
+
 #include "Config.h"
 
 EngineData* loadEngineSettings(CSimpleIni& ini) {

@@ -5,11 +5,7 @@
  */
 #pragma once
 
-#include <sstream>
-#include <fstream>
-
-#include "Helper/Helper.h"
-#include "SimpleIni/SimpleIni.h"
+#include "utilities/SimpleIni/SimpleIni.h"
 
 const int startupDelay = 4000; // in ms
 

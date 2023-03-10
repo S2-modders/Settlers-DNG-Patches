@@ -7,12 +7,10 @@
 #pragma once
 
 #include <Windows.h>
-#include <sstream>
-#include <iostream>
-#include <thread>
+
+#include "utilities/Helper/Helper.h"
 
 #include "Config.h"
-#include "Helper/Logger.h"
 
 const int version_maj = 1;
 const int version_min = 10;

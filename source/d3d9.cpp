@@ -7,14 +7,13 @@
 
 #include "d3d9.h"
 
-#include "Helper/Helper.h"
-#include "Helper/Logger.h"
+#include "utilities/Helper/Helper.h"
+#include "utilities/Helper/Logger.h"
+#include "utilities/SimpleIni/SimpleIni.h"
 
 #include "Config.h"
 #include "Lobby.h"
 #include "MainPatch.h"
-
-#include "SimpleIni/SimpleIni.h"
 
 /*************************
 Edit Values

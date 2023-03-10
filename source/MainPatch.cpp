@@ -5,6 +5,12 @@
  *
  */
 
+#include <sstream>
+#include <iostream>
+#include <thread>
+
+#include "utilities/Helper/Logger.h"
+
 #include "MainPatch.h"
 
 namespace MainPatch_Logger {
