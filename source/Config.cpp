@@ -20,7 +20,7 @@ EngineData* loadEngineSettings(CSimpleIni& ini) {
     eData->bVSync = ini.GetBoolValue("Game", "ForceVSync", true);
     eData->MSAA = ini.GetLongValue("Game", "ForceMSAA", 4);
     eData->Anisotropy = ini.GetLongValue("Game", "ForceAnisotropy", 16);
-    eData->bNativeDX = ini.GetBoolValue("Game", "ForceNativeDX");
+    eData->bVulkan = ini.GetBoolValue("Game", "ForceNativeDX");
 
     eData->bDebugMode = ini.GetBoolValue("Misc", "DebugMode");
     eData->bDebugWindow = ini.GetBoolValue("Misc", "DebugWindow");
@@ -72,11 +72,13 @@ void setEngineData(char* iniPath, EngineData* eData) {
     ini.SetUnicode(false);
 
     ini.SetLongValue("Engine", "hardwareCursor", (long)eData->bHardwareCursor);
-    //ini.SetLongValue("Engine", "vsync", (long)eData->bVSync);
-    ini.SetLongValue("Engine", "vsync", 0);
-    //ini.SetLongValue("Engine", "refreshRate", (long)eData->refreshRate);
     ini.SetLongValue("Engine", "refreshRate", 0); // this setting causes more problems than it solves
     ini.SetLongValue("Engine", "useMeshCache", 1);
+
+    if (eData->bVulkan)
+        ini.SetLongValue("Engine", "vsync", 0);
+    else 
+        ini.SetLongValue("Engine", "vsync", eData->bVSync ? 1 : 0);
 
     remove(iniPath);
     ini.SaveFile(iniPath);

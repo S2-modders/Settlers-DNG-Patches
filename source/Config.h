@@ -26,7 +26,7 @@ struct ServerAddr {
 struct EngineData {
     bool bHardwareCursor;
     bool bVSync;
-    bool bNativeDX;
+    bool bVulkan;
     bool bDebugMode;
     bool bDebugWindow;
     int fpsLimit;
