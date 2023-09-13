@@ -263,7 +263,7 @@ bool WINAPI DllMain(HMODULE hModule, DWORD fdwReason, LPVOID lpReserved) {
         CameraData* cameraData = loadCameraSettings(config);
         LobbyData* lobbyData = loadLobbySettings(config);
 
-        auto* settings = new PatchSettings;
+        auto settings = new PatchSettings;
         settings->gameVersion = V_UNKNOWN;
         settings->engineData = engineData;
         settings->cameraData = cameraData;
@@ -286,26 +286,40 @@ bool WINAPI DllMain(HMODULE hModule, DWORD fdwReason, LPVOID lpReserved) {
             << "Enforced fps limit: " << engineData->fpsLimit << "fps"
             << std::endl;
 
+        if (engineData->bVulkan) {
+            if (isVulkanSupported()) {
+                logger.debug("Vulkan supported!");
+            }
+            else {
+                logger.debug("Vulkan NOT supported!");
+                engineData->bVulkan = false;
+            }
+        }
+        else {
+            logger.debug("Using native DX");
+        }
+
         logger.debug("Setting engine INI");
         setEngineData(engineINI, engineData);
 
-        if (lobbyData->bEnabled) {
+        if (lobbyData->bEnabled && false) { // disabled for now
             logger.debug("Setting network INI");
             setNetworkData(networkINI, lobbyData);
         }
 
-        if (isVulkanSupported())
-            logger.debug("Vulkan supported!");
-        else
-            logger.debug("Vulkan NOT supported!");
+        if (!isWine() && engineData->bVulkan) {
+            getGameDirectory(hm, path, MAX_PATH, "\\bin\\__config_cache", 1);
+            memcpy_s(cameraData->VkConfigPath, MAX_PATH, path, MAX_PATH);
+            memcpy_s(VkConfigPath, MAX_PATH, path, MAX_PATH);
+            logger.debug() << "Vk config cache location: " << VkConfigPath << std::endl;
 
-        getGameDirectory(hm, path, MAX_PATH, "\\bin\\__config_cache", 1);
-        memcpy_s(cameraData->VkConfigPath, MAX_PATH, path, MAX_PATH);
-        memcpy_s(VkConfigPath, MAX_PATH, path, MAX_PATH);
-        //logger.debug() << "Vk config cache location: " << path << std::endl;
+            logger.info() << "Using shipped DX9: ";
+            getGameDirectory(hm, path, MAX_PATH, "\\bin\\d3d9vk.dll", 1);
 
-        // on Linux we use d3d9 provided by the system
-        if (engineData->bNativeDX || isWine() || !isVulkanSupported()) {
+            bFPSLimit = false;
+        }
+        else {
+            // on Linux we use d3d9 provided by the system
             logger.info() << "Using system DX9: ";
 
             GetSystemDirectory(path, MAX_PATH);
@@ -315,22 +329,15 @@ bool WINAPI DllMain(HMODULE hModule, DWORD fdwReason, LPVOID lpReserved) {
                 bFPSLimit = true;
                 fFPSLimit = (float)engineData->fpsLimit;
             }
-            else {
+            else
                 bFPSLimit = false;
-            }
-        }
-        else {
-            logger.info() << "Using shipped DX9: ";
-
-            getGameDirectory(hm, path, MAX_PATH, "\\bin\\d3d9vk.dll", 1);
         }
 
         logger.naked(path);
 
-        if (!engineData->bNativeDX || isWine()) {
-            bFPSLimit = false;
-
-            SetEnvironmentVariable("DXVK_LOG_LEVEL", "none");
+        if (engineData->bVulkan || isWine()) {
+            if (!engineData->bDebugMode)
+                SetEnvironmentVariable("DXVK_LOG_LEVEL", "none");
             SetEnvironmentVariable("DXVK_CONFIG_FILE", cameraData->VkConfigPath);
 
             logger.debug("Writing Vk config cache");

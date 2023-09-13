@@ -222,7 +222,8 @@ int MainPatch::run() {
 
         patchCamera();
 
-        doDebug();
+        if (settings->engineData->bDebugMode)
+            doDebug();
 
         //setCursor();
     }
@@ -298,6 +299,9 @@ void MainPatch::patchLobbyFilter() {
 }
 
 void MainPatch::patchZoomIncrement() {
+    float** incr = (float**)calcAddress(patchData.zoomIncrAddr);
+    logger.debug() << "Incr: " << *zoomStep_p << " " << **incr << std::endl;
+
     writeBytes(calcAddress(patchData.zoomIncrAddr), &zoomStep_p, 4);
     writeBytes(calcAddress(patchData.zoomDecrAddr), &zoomStep_p, 4);
 
@@ -349,9 +353,6 @@ bool MainPatch::calcZoomValue() {
 }
 
 void MainPatch::doDebug() {
-    if (!settings->engineData->bDebugMode)
-        return;
-
     if (isKeyPressed(VK_F3)) {
         int t_hor, t_ver;
         getDesktopResolution2(t_hor, t_ver);
