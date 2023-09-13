@@ -647,6 +647,73 @@ HRESULT f_IDirect3DDevice9::SetRenderTarget(THIS_ DWORD RenderTargetIndex, IDire
 
 HRESULT f_IDirect3DDevice9::SetTransform(D3DTRANSFORMSTATETYPE State, CONST D3DMATRIX *pMatrix)
 {
+    //return D3D_OK;
+    return f_pD3DDevice->SetTransform(State, pMatrix);
+
+    if (State == D3DTS_PROJECTION) {
+        return D3D_OK;
+
+        //std::cout << "Set Transform D3DTS_PROJECTION" << std::endl;
+
+        D3DMATRIX tmat;
+
+        HRESULT res = f_pD3DDevice->GetTransform(D3DTS_PROJECTION, &tmat);
+        if (res != D3D_OK)
+            std::cout << "shit!" << std::endl;
+
+        tmat._11 = 1 / std::tanf(2.0f * 0.5f);
+
+        std::cout << "11: " << tmat._11 << " 22: " << tmat._22 << std::endl;
+
+        return f_pD3DDevice->SetTransform(State, &tmat);
+
+        float w = pMatrix->_11;
+        float fov_w = std::atanf(1 / w) * 2;
+        
+        float h = pMatrix->_22;
+        float fov_h = std::atanf(1 / h) * 2;
+
+        //std::cout << "w: " << fov_w << " h: " << fov_h << std::endl;
+
+        // value is usually 0,872
+        if (fov_w > 0.85f && fov_w < 0.88f && false) {
+            //D3DMATRIX tmat(*pMatrix);
+            //ZeroMemory(&tmat, sizeof(tmat));
+
+            tmat._11 = 1 / std::tanf(1.91f * 0.5f);
+
+            float tt = std::atanf(1 / tmat._11) * 2;
+            float vv = std::atanf(1 / tmat._22) * 2;
+
+            std::cout << "w: " << fov_w << " -> " << tt
+                << " ||  h: " << fov_h << " -> " << vv << std::endl;
+
+            return f_pD3DDevice->SetTransform(State, &tmat);
+        }
+
+        if (fov_w > 1.0f) {
+            //D3DMATRIX tmat(*pMatrix);
+
+            //tmat._11 = 1 / std::tanf(1.91f * 0.5f);
+            tmat._11 = tmat._22 / (16 / 9);
+
+            float tt = std::atanf(1 / tmat._11) * 2;
+            float vv = std::atanf(1 / tmat._22) * 2;
+
+            std::cout << "w: " << fov_w << " -> " << tt
+                << " ||  h: " << fov_h << " -> " << vv << std::endl;
+
+            std::cout << "w: " << fov_w << " h: " << fov_h << std::endl;
+
+            //ZeroMemory(&tmat, sizeof(tmat));
+
+            return f_pD3DDevice->SetTransform(State, &tmat);
+        }
+
+
+        //std::cout << "h: " << pMatrix->_22 << std::endl;
+    }
+
     return f_pD3DDevice->SetTransform(State, pMatrix);
 }
 
