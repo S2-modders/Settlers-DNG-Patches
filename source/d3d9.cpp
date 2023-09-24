@@ -311,7 +311,7 @@ bool WINAPI DllMain(HMODULE hModule, DWORD fdwReason, LPVOID lpReserved) {
             getGameDirectory(hm, path, MAX_PATH, "\\bin\\__config_cache", 1);
             memcpy_s(cameraData->VkConfigPath, MAX_PATH, path, MAX_PATH);
             memcpy_s(VkConfigPath, MAX_PATH, path, MAX_PATH);
-            logger.debug() << "Vk config cache location: " << VkConfigPath << std::endl;
+            //logger.debug() << "Vk config cache location: " << VkConfigPath << std::endl;
 
             logger.info() << "Using shipped DX9: ";
             getGameDirectory(hm, path, MAX_PATH, "\\bin\\d3d9vk.dll", 1);
