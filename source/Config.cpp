@@ -20,7 +20,7 @@ EngineData* loadEngineSettings(CSimpleIni& ini) {
     eData->bVSync = ini.GetBoolValue("Game", "ForceVSync", true);
     eData->MSAA = ini.GetLongValue("Game", "ForceMSAA", 4);
     eData->Anisotropy = ini.GetLongValue("Game", "ForceAnisotropy", 16);
-    eData->bVulkan = ini.GetBoolValue("Game", "ForceNativeDX");
+    eData->bVulkan = ini.GetBoolValue("Game", "UseVulkan");
 
     eData->bDebugMode = ini.GetBoolValue("Misc", "DebugMode");
     eData->bDebugWindow = ini.GetBoolValue("Misc", "DebugWindow");
