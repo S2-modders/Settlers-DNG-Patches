@@ -281,7 +281,10 @@ void MainPatch::patchCamera() {
             logger.debug("WideView disabled");
 
         *maxZoom = newZoomValue;
-        logger.debug() << "New MaxZoom: " << newZoomValue << std::endl;
+        logger.debug() << "New MaxZoom: " << newZoomValue;
+        if (isZoomOverride())
+            logger.naked() << " (override)";
+        logger.naked() << std::endl;
 
         patchZoomIncrement();
     }
@@ -309,6 +312,11 @@ void MainPatch::patchZoomIncrement() {
 }
 
 bool MainPatch::calcZoomValue() {
+    if (isZoomOverride()) {
+        newZoomValue = settings->cameraData->customZoom;
+        return true;
+    }
+
     /* maxZoomValue will be set depending on the aspect ratio of the screen */
     float aspr = calcAspectRatio();
 
@@ -384,6 +392,10 @@ void MainPatch::doDebug() {
     if (isKeyPressed(VK_F8)) {
         logger.debug() << "World address: " << worldObj << " World value: " << *worldObj << std::endl;
     }
+}
+
+bool MainPatch::isZoomOverride() {
+    return settings->cameraData->customZoom > 0;
 }
 
 

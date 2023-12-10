@@ -38,6 +38,7 @@ struct CameraData {
     bool bEnabled;
     bool bWideView;
     float fZoomIncrement;
+    int customZoom;
     char VkConfigPath[MAX_PATH];
 };
 

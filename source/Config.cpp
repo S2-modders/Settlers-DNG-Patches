@@ -46,6 +46,7 @@ CameraData* loadCameraSettings(CSimpleIni& ini) {
     }
 
     cData->bWideView = ini.GetBoolValue("Camera", "WideViewMode", true);
+    cData->customZoom = ini.GetLongValue("Camera", "DebugOverrrideZoom", -1);
 
     return cData;
 }

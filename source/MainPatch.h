@@ -55,9 +55,9 @@ private:
     // TODO: this should be in Lobby.h
     void patchLobbyFilter();
 
+    bool isZoomOverride();
     bool calcZoomValue();
 
     void doDebug();
-
     void setCursor();
 };
