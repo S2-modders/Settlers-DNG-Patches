@@ -8,13 +8,14 @@ _*
 *.exe
 *.yml
 *.zip
-*.dll
 *.pdb
 *.exp
 *.lib
 *.sln
+*.aps
 
 data/frpc*
+data/d3d9vk*
 
 *.vcxproj*
 
