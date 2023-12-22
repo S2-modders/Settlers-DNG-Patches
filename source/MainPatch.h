@@ -52,6 +52,8 @@ private:
     void patchCamera();
     void patchZoomIncrement();
 
+    void patchFogDisable();
+
     // TODO: this should be in Lobby.h
     void patchLobbyFilter();
 
