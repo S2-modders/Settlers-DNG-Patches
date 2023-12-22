@@ -237,6 +237,7 @@ HMODULE hm = NULL;
 CSimpleIniA config;
 char VkConfigPath[MAX_PATH];
 
+
 bool WINAPI DllMain(HMODULE hModule, DWORD fdwReason, LPVOID lpReserved) {
     switch (fdwReason)
     {
@@ -277,9 +278,6 @@ bool WINAPI DllMain(HMODULE hModule, DWORD fdwReason, LPVOID lpReserved) {
         else
             logger.info() << "logging to " << logFile << std::endl;
 
-        //auto cursor = test(hm);
-        //settings->cursor = cursor;
-
         int refreshRate = getDesktopRefreshRate();
         engineData->fpsLimit = MainPatch::calcMaxFramerate(engineData->fpsLimit, engineData->bVSync);
         logger.debug() << "Detected refresh rate: " << refreshRate << "Hz | "
@@ -302,7 +300,7 @@ bool WINAPI DllMain(HMODULE hModule, DWORD fdwReason, LPVOID lpReserved) {
         logger.debug("Setting engine INI");
         setEngineData(engineINI, engineData);
 
-        if (lobbyData->bEnabled && false) { // disabled for now
+        if (lobbyData->bEnabled) {
             logger.debug("Setting network INI");
             setNetworkData(networkINI, lobbyData);
         }
@@ -319,7 +317,7 @@ bool WINAPI DllMain(HMODULE hModule, DWORD fdwReason, LPVOID lpReserved) {
             bFPSLimit = false;
         }
         else {
-            // on Linux we use d3d9 provided by the system
+            // use d3d9 provided by the system
             logger.info() << "Using system DX9: ";
 
             GetSystemDirectory(path, MAX_PATH);
@@ -346,8 +344,8 @@ bool WINAPI DllMain(HMODULE hModule, DWORD fdwReason, LPVOID lpReserved) {
 
         CreateThread(0, 0, MainPatchThread, settings, 0, 0);
 
-        //if (lobbyData->bEnabled)
-        //    CreateThread(0, 0, LobbyPatchThread, settings, 0, 0);
+        if (lobbyData->bEnabled)
+            CreateThread(0, 0, LobbyPatchThread, settings, 0, 0);
 
         d3d9.dll = LoadLibrary(path);
         d3d9.D3DPERF_BeginEvent = (LPD3DPERF_BEGINEVENT)GetProcAddress(d3d9.dll, "D3DPERF_BeginEvent");

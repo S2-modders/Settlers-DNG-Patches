@@ -49,6 +49,7 @@ struct LobbyData {
     unsigned int patchLevel;
     unsigned int gamePort;
     ServerAddr serverAddr;
+    unsigned int apiPort;
 };
 
 struct PatchSettings {

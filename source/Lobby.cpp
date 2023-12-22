@@ -4,6 +4,7 @@
  * This source code is licensed under GPL-v3
  *
  */
+ // this is here correctly, DO NOT TOUCH
 #include "utilities/httplib/httplib.h"
 
 #include <Windows.h>
@@ -23,10 +24,6 @@ namespace Lobby_Logger {
 }
 using Lobby_Logger::logger;
 
-
-STARTUPINFO si;
-PROCESS_INFORMATION bridgeProcessInfo;
-
 DWORD LoggerAddr1 = 0x7538;
 DWORD LoggerAddr2 = 0x751E;
 
@@ -36,33 +33,89 @@ const int retryCount = 10;
 const int retryTimeout = 1000;
 
 LobbyData* lobbyData;
-unsigned int bridgePort;
+
+//unsigned int bridgePort;
+//STARTUPINFO si;
+//PROCESS_INFORMATION bridgeProcessInfo;
 
 
 HMODULE getMatchmakingAddress() {
     return getModuleAddress("matchmaking.dll");
 }
 
-void requestRemotePort(const char* ip, int controllerPort) {
-    logger.debug("Requesting remote Port");
-
+bool checkPortForward(std::string& hostIP, const char* serverIP, int controllerPort) {
     std::stringstream url;
-    url << "http://" << ip << ":" << controllerPort;
+    url << "http://" << serverIP << ":" << controllerPort;
 
-    httplib::Client cli(url.str());
+    httplib::Client client(url.str());
 
-    if (auto res = cli.Get("/api/request")) {
-        if (res->status == 200) {
-            bridgePort = std::atoi(res->body.c_str());
-
-            logger.debug() << "port received: " << bridgePort << std::endl;
-        } else {
-            logger.error() << "API request failed with " << res->status << std::endl;
-            bridgePort = 0;
+    logger.info() << "Port forward check: ";
+    if (auto res = client.Get("/port/check")) {
+        switch (res->status) {
+        case 200:
+            logger.naked("ok");
+            hostIP = std::string(res->body);
+            return true;
+            break;
+        case 900:
+            logger.naked("no forward");
+            hostIP = std::string(serverIP);
+            return false;
+            break;
+        default:
+            logger.naked() << "failed with: " << res->status << std::endl;
+            return false;
         }
+    }
+    else {
+        logger.error("Failed to connect to Controller server");
+        return false;
     }
 }
 
+bool requestNetworkBridge(unsigned int& hostPort, unsigned int& clientPort, const char* serverIP, int controllerPort) {
+    std::stringstream url;
+    url << "http://" << serverIP << ":" << controllerPort;
+
+    httplib::Client httpClient(url.str());
+    std::string hostClientPair;
+
+    logger.info() << "Requesting network bridge: ";
+    if (auto res = httpClient.Get("/request/bridge")) {
+        switch (res->status) {
+        case 200:
+            logger.naked("ok");
+            hostClientPair = res->body;
+            break;
+        case 500:
+            logger.naked() << "failed with: " << res->body << std::endl;
+            return false;
+            break;
+        default:
+            logger.naked() << "failed with: " << res->status << std::endl;
+            return false;
+        }
+    }
+    else {
+        logger.error("Failed to connect to Controller server");
+        return false;
+    }
+
+    auto nPos = hostClientPair.find(":");
+    std::string host = hostClientPair.substr(0, nPos);
+    std::string client = hostClientPair.substr(nPos);
+
+    logger.debug() << "HostPort: " << host << " ClientPort: " << client << std::endl;
+
+    //hostPort = std::atoi(host.c_str());
+    //clientPort = std::atoi(client.c_str());
+
+    // TODO create network bridge
+
+    return true;
+}
+
+/*
 void createTCPBridge() {
     logger.debug("CreateGameServerPayload triggered!");
 
@@ -118,14 +171,42 @@ void createTCPBridge() {
 
     logger.debug("End injected function");
 }
+*/
+
+void createNetBridge() {
+    logger.debug("CreateGameServerPayload triggered");
+
+    auto serverIP = lobbyData->serverAddr.IP;
+    auto serverPort = lobbyData->apiPort;
+
+    if (checkPortForward(hostIP, serverIP, serverPort)) {
+        clientPort = lobbyData->gamePort;
+        return;
+    }
+
+    if ( ! requestNetworkBridge(hostPort, clientPort, serverIP, serverPort)) {
+        clientPort = 9999; // misused as error code for the lobby server
+    }
+
+    logger.debug() << "PORT STR: " << portStrAddr << std::endl;
+}
+
+std::string hostIP; // public IP of this client
+unsigned int hostPort = 0;
+unsigned int clientPort = 0;
 
 DWORD jmpBackAddr;
 DWORD portStrAddr = (DWORD)getMatchmakingAddress() + 0xA7EC;
 void __declspec(naked) jumperFunction() {
-    createTCPBridge();
     __asm {
+        pushad
+    }
+    createNetBridge();
+    __asm {
+        popad
+
         //mov edx, [eax+0x2C]
-        mov edx, [bridgePort]
+        mov edx, [clientPort]
         push edx
         push [portStrAddr]
         jmp [jmpBackAddr]
@@ -134,6 +215,8 @@ void __declspec(naked) jumperFunction() {
 
 LobbyPatch::LobbyPatch(PatchSettings* settings) {
     this->settings = settings;
+
+    lobbyData = settings->lobbyData;
 }
 
 int LobbyPatch::run() {
@@ -162,16 +245,6 @@ void LobbyPatch::setTincatDebugMode() {
 void LobbyPatch::hookCreateGameServerPayload() {
     DWORD hookAddr = (DWORD)getMatchmakingAddress() + CreateGamePayloadPortHook;
     functionInjectorReturn((DWORD*)hookAddr, jumperFunction, jmpBackAddr, 9);
-
-    /*
-     * old inject CreateGameServerPayload
-     * 
-    int hookLength = 9;
-    DWORD hookAddr = (DWORD)getMatchmakingAddress() + CreateGamePayloadPortHook;
-    jmpBackAddr = hookAddr + hookLength;
-
-    functionInjector((DWORD*)hookAddr, jumperFunction, hookLength);
-    */
 }
 
 
@@ -189,7 +262,7 @@ int prepareLobby(PatchSettings* settings) {
         break;
 
     default:
-        logger.info("Lobby patch disabled for this version");
+        logger.info("Lobby patch not supported for this version");
         break;
     }
 
