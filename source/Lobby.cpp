@@ -95,7 +95,7 @@ bool requestNetworkBridge(unsigned int& hostPort, unsigned int& clientPort, cons
         }
     }
     else {
-        logger.error("Failed to connect to Controller server");
+        logger.naked() << "Failed to connect to Controller server";
         return false;
     }
 
@@ -256,6 +256,7 @@ int prepareLobby(PatchSettings* settings) {
 
     switch (settings->gameVersion) {
     case V_BASE_GOG:
+    case V_BASE_GOLD:
         return LobbyPatch(settings).run();
         break;
 

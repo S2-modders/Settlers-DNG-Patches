@@ -48,7 +48,7 @@ private:
     float newZoomValue = 4.0f; // 4 is the default zoom value
 
     bool isWorldObject();
-    
+
     void patchCamera();
     void patchZoomIncrement();
 
