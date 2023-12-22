@@ -3,8 +3,10 @@
  *
  * This source code is licensed under GPL-v3
  *
- */
- // this is here correctly, DO NOT TOUCH
+ */ 
+#define WIN32_LEAN_AND_MEAN
+
+// this is here correctly, DO NOT TOUCH
 #include "utilities/httplib/httplib.h"
 
 #include <Windows.h>
@@ -33,10 +35,6 @@ const int retryCount = 10;
 const int retryTimeout = 1000;
 
 LobbyData* lobbyData;
-
-//unsigned int bridgePort;
-//STARTUPINFO si;
-//PROCESS_INFORMATION bridgeProcessInfo;
 
 
 HMODULE getMatchmakingAddress() {
@@ -80,7 +78,7 @@ bool requestNetworkBridge(unsigned int& hostPort, unsigned int& clientPort, cons
     httplib::Client httpClient(url.str());
     std::string hostClientPair;
 
-    logger.info() << "Requesting network bridge: ";
+    logger.info() << "Requesting network bridge - ";
     if (auto res = httpClient.Get("/request/bridge")) {
         switch (res->status) {
         case 200:
@@ -103,12 +101,12 @@ bool requestNetworkBridge(unsigned int& hostPort, unsigned int& clientPort, cons
 
     auto nPos = hostClientPair.find(":");
     std::string host = hostClientPair.substr(0, nPos);
-    std::string client = hostClientPair.substr(nPos);
+    std::string client = hostClientPair.substr(nPos+1);
 
-    logger.debug() << "HostPort: " << host << " ClientPort: " << client << std::endl;
+    hostPort = std::atoi(host.c_str());
+    clientPort = std::atoi(client.c_str());
 
-    //hostPort = std::atoi(host.c_str());
-    //clientPort = std::atoi(client.c_str());
+    logger.debug() << "HostPort: " << hostPort << " ClientPort: " << clientPort << std::endl;
 
     // TODO create network bridge
 
@@ -173,6 +171,14 @@ void createTCPBridge() {
 }
 */
 
+
+std::string hostIP; // public IP of this client
+unsigned int hostPort = 0;
+unsigned int clientPort = 0;
+
+DWORD jmpBackAddr;
+DWORD portStrAddr = (DWORD)getMatchmakingAddress() + 0xA7EC;
+
 void createNetBridge() {
     logger.debug("CreateGameServerPayload triggered");
 
@@ -187,16 +193,7 @@ void createNetBridge() {
     if ( ! requestNetworkBridge(hostPort, clientPort, serverIP, serverPort)) {
         clientPort = 9999; // misused as error code for the lobby server
     }
-
-    logger.debug() << "PORT STR: " << portStrAddr << std::endl;
 }
-
-std::string hostIP; // public IP of this client
-unsigned int hostPort = 0;
-unsigned int clientPort = 0;
-
-DWORD jmpBackAddr;
-DWORD portStrAddr = (DWORD)getMatchmakingAddress() + 0xA7EC;
 void __declspec(naked) jumperFunction() {
     __asm {
         pushad
@@ -222,10 +219,10 @@ LobbyPatch::LobbyPatch(PatchSettings* settings) {
 int LobbyPatch::run() {
     logger.info("LobbyPatch started");
 
-    if (settings->lobbyData->bTincatDebug)
-        setTincatDebugMode();
+//    if (settings->lobbyData->bTincatDebug)
+//        setTincatDebugMode();
 
-    //hookCreateGameServerPayload();
+    hookCreateGameServerPayload();
     //patchLobbyFilter();
 
     return 0;
@@ -243,6 +240,7 @@ void LobbyPatch::setTincatDebugMode() {
 }
 
 void LobbyPatch::hookCreateGameServerPayload() {
+    logger.debug("Installing hook for ServerPayload");
     DWORD hookAddr = (DWORD)getMatchmakingAddress() + CreateGamePayloadPortHook;
     functionInjectorReturn((DWORD*)hookAddr, jumperFunction, jmpBackAddr, 9);
 }
