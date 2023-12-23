@@ -13,12 +13,12 @@ DWORD WINAPI LobbyPatchThread(LPVOID param);
 
 class LobbyPatch {
 public:
+    PatchSettings* settings;
+
     explicit LobbyPatch(PatchSettings* settings);
 
     int run();
 private:
-    PatchSettings* settings;
-
     void hookCreateGameServerPayload();
     void setTincatDebugMode();
     void patchLobbyFilter();

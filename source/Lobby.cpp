@@ -3,7 +3,10 @@
  *
  * This source code is licensed under GPL-v3
  *
- */
+ */ 
+#define WIN32_LEAN_AND_MEAN
+
+// this is here correctly, DO NOT TOUCH
 #include "utilities/httplib/httplib.h"
 
 #include <Windows.h>
@@ -23,10 +26,6 @@ namespace Lobby_Logger {
 }
 using Lobby_Logger::logger;
 
-
-STARTUPINFO si;
-PROCESS_INFORMATION bridgeProcessInfo;
-
 DWORD LoggerAddr1 = 0x7538;
 DWORD LoggerAddr2 = 0x751E;
 
@@ -36,96 +35,169 @@ const int retryCount = 10;
 const int retryTimeout = 1000;
 
 LobbyData* lobbyData;
-unsigned int bridgePort;
+
+STARTUPINFO si;
+PROCESS_INFORMATION bridgeProcessInfo;
 
 
 HMODULE getMatchmakingAddress() {
     return getModuleAddress("matchmaking.dll");
 }
 
-void requestRemotePort(const char* ip, int controllerPort) {
-    logger.debug("Requesting remote Port");
-
+bool checkPortForward(std::string& hostIP, const char* serverIP, int apiPort) {
     std::stringstream url;
-    url << "http://" << ip << ":" << controllerPort;
+    url << "http://" << serverIP << ":" << apiPort;
 
-    httplib::Client cli(url.str());
+    httplib::Client client(url.str());
 
-    if (auto res = cli.Get("/api/request")) {
-        if (res->status == 200) {
-            bridgePort = std::atoi(res->body.c_str());
-
-            logger.debug() << "port received: " << bridgePort << std::endl;
-        } else {
-            logger.error() << "API request failed with " << res->status << std::endl;
-            bridgePort = 0;
+    logger.info() << "Port forward check: ";
+    if (auto res = client.Get("/port/check")) {
+        switch (res->status) {
+        case 200:
+            logger.naked("ok");
+            hostIP = std::string(res->body);
+            return true;
+            break;
+        case 900:
+            logger.naked("no forward");
+            hostIP = std::string(serverIP);
+            return false;
+            break;
+        default:
+            logger.naked() << "failed with: " << res->status << std::endl;
+            return false;
         }
+    }
+    else {
+        logger.error("Failed to connect to Controller server");
+        return false;
     }
 }
 
-void createTCPBridge() {
-    logger.debug("CreateGameServerPayload triggered!");
+bool requestControllerPort(unsigned int& port, const char* serverIP, int apiPort) {
+    std::stringstream url;
+    url << "http://" << serverIP << ":" << apiPort;
 
-    logger.debug() << "Bridge process ID: " << bridgeProcessInfo.dwProcessId << std::endl;
-    if (bridgeProcessInfo.dwProcessId > 0) {
-        logger.warn("Bridge seems to be already running...");
-        return;
+    httplib::Client httpClient(url.str());
+    if (auto res = httpClient.Get("/port/controller")) {
+        if (res->status == 200) {
+            port = std::atoi(res->body.c_str());
+            logger.debug() << "Using controller port: " << port << std::endl;
+            return true;
+        }
     }
 
-    char iniPath[MAX_PATH];
+    logger.error("Failed to request controller port");
+    return false;
+}
+
+bool requestNetworkBridge(unsigned int& hostPort, const char* serverIP, int apiPort) {
+    std::stringstream url;
+    url << "http://" << serverIP << ":" << apiPort;
+
+    httplib::Client httpClient(url.str());
+
+    logger.info() << "Requesting host port - ";
+    if (auto res = httpClient.Get("/request/port")) {
+        switch (res->status) {
+        case 200:
+            hostPort = std::atoi(res->body.c_str());
+            logger.naked() << "ok (" << hostPort << ")" << std::endl;
+            break;
+        case 500:
+            logger.naked() << "failed with: " << res->body << std::endl;
+            return false;
+            break;
+        default:
+            logger.naked() << "failed with: " << res->status << std::endl;
+            return false;
+        }
+    }
+    else {
+        logger.naked() << "Failed to connect to Controller server";
+        return false;
+    }
+
+    if (bridgeProcessInfo.dwProcessId > 0) {
+        logger.debug() << "Bridge process seems to be running: " << bridgeProcessInfo.dwProcessId << std::endl;
+
+        HANDLE hProcess = OpenProcess(PROCESS_TERMINATE, FALSE, bridgeProcessInfo.dwProcessId);
+        if (hProcess != NULL) {
+            if (!TerminateProcess(hProcess, 0))
+                logger.error("TerminateProcess failed");
+            else
+                logger.debug("Process stopped");
+
+            CloseHandle(hProcess);
+        }
+        else {
+            logger.error("hProcess is NULL");
+        }
+    }
+
+    unsigned int controllerPort;
+    if (!requestControllerPort(controllerPort, serverIP, apiPort)) {
+        return false;
+    }
+
     char exePath[MAX_PATH];
-
-    GetCurrentDirectoryA(MAX_PATH, iniPath);
-
-    strncpy_s(exePath, iniPath, MAX_PATH);
-    strcat_s(iniPath, "\\bin\\frpc.ini");
-    strcat_s(exePath, "\\bin\\frpc.exe");
-
-    logger.debug() << "frpc ini path: " << iniPath << std::endl;
-
-    CSimpleIniA ini;
-    ini.SetUnicode();
-    ini.LoadFile(iniPath);
-
-    const char* serverIP = ini.GetValue("common", "server_addr", "0.0.0.0");
-    long controllerPort = ini.GetLongValue("common", "server_controller_port", 5480);
-
-    logger.info() << "server IP: " << serverIP
-        << ", controller port: " << controllerPort << std::endl;
-
-    logger.debug("starting TCP bridge...");
+    GetCurrentDirectory(MAX_PATH, exePath);
+    strcat_s(exePath, "\\bin\\tincat3bridge.dll");
+    logger.debug() << "bridge DLL: " << exePath << std::endl;
 
     std::stringstream command;
-    command << "\"" << exePath << "\" -c .\\bin\\frpc.ini";
+    command << "\"" << exePath << "\" tcp"
+        << " -l " << lobbyData->gamePort
+        << " -r " << hostPort
+        << " -s " << serverIP
+        << " -P " << controllerPort
+        << " -u " << serverIP << ":" << hostPort
+        << " --tls_enable false";
 
-    requestRemotePort(serverIP, controllerPort);
-
-    if (bridgePort == 0) {
-        logger.error("failed to get bridge port, aborting");
-        return;
-    }
-
-    ini.SetLongValue("s2lobby", "remote_port", (long)bridgePort);
-    ini.SaveFile(iniPath);
-
-    logger.debug("Creating new process...");
+    logger.info() << "Starting bridge process (" << serverIP << ":" << hostPort << ")" << std::endl;
 
     ZeroMemory(&si, sizeof(si));
     si.cb = sizeof(si);;
     ZeroMemory(&bridgeProcessInfo, sizeof(bridgeProcessInfo));
-        
+
     CreateProcessA(NULL, (LPSTR)command.str().c_str(), NULL, NULL, false, 0, NULL, NULL, &si, &bridgeProcessInfo);
 
     logger.debug("End injected function");
+    return true;
 }
+
+
+std::string hostIP; // public IP of this client
+unsigned int hostPort = 0;
 
 DWORD jmpBackAddr;
 DWORD portStrAddr = (DWORD)getMatchmakingAddress() + 0xA7EC;
+
+void createNetBridge() {
+    logger.debug("CreateGameServerPayload triggered");
+
+    auto serverIP = lobbyData->serverAddr.IP;
+    auto serverPort = lobbyData->apiPort;
+
+    if (checkPortForward(hostIP, serverIP, serverPort)) {
+        hostPort = lobbyData->gamePort;
+        return;
+    }
+
+    if ( ! requestNetworkBridge(hostPort, serverIP, serverPort)) {
+        hostPort = 9999; // misused as error code for the lobby server
+    }
+}
 void __declspec(naked) jumperFunction() {
-    createTCPBridge();
     __asm {
+        pushad
+    }
+    createNetBridge();
+    __asm {
+        popad
+
         //mov edx, [eax+0x2C]
-        mov edx, [bridgePort]
+        mov edx, [hostPort]
         push edx
         push [portStrAddr]
         jmp [jmpBackAddr]
@@ -134,15 +206,17 @@ void __declspec(naked) jumperFunction() {
 
 LobbyPatch::LobbyPatch(PatchSettings* settings) {
     this->settings = settings;
+
+    lobbyData = settings->lobbyData;
 }
 
 int LobbyPatch::run() {
     logger.info("LobbyPatch started");
 
-    if (settings->lobbyData->bTincatDebug)
-        setTincatDebugMode();
+//    if (settings->lobbyData->bTincatDebug)
+//        setTincatDebugMode();
 
-    //hookCreateGameServerPayload();
+    hookCreateGameServerPayload();
     //patchLobbyFilter();
 
     return 0;
@@ -160,18 +234,9 @@ void LobbyPatch::setTincatDebugMode() {
 }
 
 void LobbyPatch::hookCreateGameServerPayload() {
+    logger.debug("Installing hook for ServerPayload");
     DWORD hookAddr = (DWORD)getMatchmakingAddress() + CreateGamePayloadPortHook;
     functionInjectorReturn((DWORD*)hookAddr, jumperFunction, jmpBackAddr, 9);
-
-    /*
-     * old inject CreateGameServerPayload
-     * 
-    int hookLength = 9;
-    DWORD hookAddr = (DWORD)getMatchmakingAddress() + CreateGamePayloadPortHook;
-    jmpBackAddr = hookAddr + hookLength;
-
-    functionInjector((DWORD*)hookAddr, jumperFunction, hookLength);
-    */
 }
 
 
@@ -185,11 +250,12 @@ int prepareLobby(PatchSettings* settings) {
 
     switch (settings->gameVersion) {
     case V_BASE_GOG:
+    case V_BASE_GOLD:
         return LobbyPatch(settings).run();
         break;
 
     default:
-        logger.info("Lobby patch disabled for this version");
+        logger.info("Lobby patch not supported for this version");
         break;
     }
 

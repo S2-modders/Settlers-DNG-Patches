@@ -1,8 +1,6 @@
 .directory
 premake*
 VersionInfo*
-frps*
-frpc*
 _*
 
 *.exe
@@ -14,7 +12,7 @@ _*
 *.sln
 *.aps
 
-data/frpc*
+data/*.dll
 data/d3d9vk*
 
 *.vcxproj*

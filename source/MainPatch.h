@@ -12,8 +12,8 @@
 
 #include "Config.h"
 
-const int version_maj = 1;
-const int version_min = 11;
+const int version_maj = 2;
+const int version_min = 0;
 
 
 struct PatchData {
@@ -48,9 +48,11 @@ private:
     float newZoomValue = 4.0f; // 4 is the default zoom value
 
     bool isWorldObject();
-    
+
     void patchCamera();
     void patchZoomIncrement();
+
+    void patchFogDisable();
 
     // TODO: this should be in Lobby.h
     void patchLobbyFilter();

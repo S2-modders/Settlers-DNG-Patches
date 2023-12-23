@@ -214,8 +214,8 @@ int MainPatch::run() {
     
     logger.info("MainPatch started");
     //patchLobbyFilter();
-
     
+    //patchFogDisable();
 
     for (;; Sleep(1000)) {
         worldObj = (float*)tracePointer(&patchData.worldObject);
@@ -290,17 +290,6 @@ void MainPatch::patchCamera() {
     }
 }
 
-void MainPatch::patchLobbyFilter() {
-    if (patchData.lobbyVersionFilterAddr == 0)
-        return;
-
-    logger.debug("patching lobby version filter");
-
-    short jne = 0x1E75;
-    short* filter = (short*)calcAddress(patchData.lobbyVersionFilterAddr);
-    writeBytes(filter, &jne, 2);
-}
-
 void MainPatch::patchZoomIncrement() {
     float** incr = (float**)calcAddress(patchData.zoomIncrAddr);
     logger.debug() << "Incr: " << *zoomStep_p << " " << **incr << std::endl;
@@ -313,7 +302,7 @@ void MainPatch::patchZoomIncrement() {
 
 bool MainPatch::calcZoomValue() {
     if (isZoomOverride()) {
-        newZoomValue = settings->cameraData->customZoom;
+        newZoomValue = (float)settings->cameraData->customZoom;
         return true;
     }
 
@@ -358,6 +347,52 @@ bool MainPatch::calcZoomValue() {
         return false;
 
     return true;
+}
+
+void MainPatch::patchLobbyFilter() {
+    if (patchData.lobbyVersionFilterAddr == 0)
+        return;
+
+    logger.debug("patching lobby version filter");
+
+    short jne = 0x1E75;
+    short* filter = (short*)calcAddress(patchData.lobbyVersionFilterAddr);
+    writeBytes(filter, &jne, 2);
+}
+
+float fogStart = 1000;
+DWORD ret1;
+void _declspec(naked) jumperFogPatch1() {
+    __asm {
+        fld dword ptr [fogStart]
+        fstp dword ptr [esi+0x6C]
+        
+        fstp st(0)
+        fld st(0)
+        jmp [ret1]
+    }
+}
+float fogEnd = 1000;
+DWORD ret2;
+void _declspec(naked) jumperFogPatch2() {
+    __asm {
+        fld dword ptr [fogEnd]
+        fstp dword ptr [esi+0x70]
+
+        fstp st(0)
+        fmul dword ptr [eax+0x40]
+        jmp[ret2]
+    }
+}
+
+void MainPatch::patchFogDisable() {
+    logger.debug("fog patch");
+
+    DWORD* fogStart = calcAddress(0x13CECA);
+    DWORD* fogEnd = calcAddress(0x13CEDD);
+
+    functionInjectorReturn(fogStart, jumperFogPatch1, ret1, 5);
+    functionInjectorReturn(fogEnd, jumperFogPatch2, ret2, 6);
 }
 
 void MainPatch::doDebug() {

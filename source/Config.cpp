@@ -63,7 +63,7 @@ LobbyData* loadLobbySettings(CSimpleIni& ini) {
     lData->patchLevel = ini.GetLongValue("Lobby", "PatchLevel", 9212);
     lData->bTincatDebug = ini.GetBoolValue("Lobby", "DebugMode");
     lData->gamePort = 5479; // config option possible but IMO not needed
-
+    lData->apiPort = (unsigned int)ini.GetLongValue("Lobby", "ApiPort", 6801);
     return lData;
 }
 
