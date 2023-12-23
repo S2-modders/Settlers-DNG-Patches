@@ -366,9 +366,11 @@ bool WINAPI DllMain(HMODULE hModule, DWORD fdwReason, LPVOID lpReserved) {
         break;
     }
     case DLL_PROCESS_DETACH:
-        //TerminateProcess(bridgeProcessInfo.hProcess, 0);
-        //CloseHandle(bridgeProcessInfo.hProcess);
-        //CloseHandle(bridgeProcessInfo.hThread);
+        HANDLE hProcess = OpenProcess(PROCESS_TERMINATE, FALSE, bridgeProcessInfo.dwProcessId);
+        if (hProcess != NULL) {
+            TerminateProcess(hProcess, 0);
+            CloseHandle(hProcess);
+        }
 
         remove(VkConfigPath);
 

@@ -36,14 +36,17 @@ const int retryTimeout = 1000;
 
 LobbyData* lobbyData;
 
+STARTUPINFO si;
+PROCESS_INFORMATION bridgeProcessInfo;
+
 
 HMODULE getMatchmakingAddress() {
     return getModuleAddress("matchmaking.dll");
 }
 
-bool checkPortForward(std::string& hostIP, const char* serverIP, int controllerPort) {
+bool checkPortForward(std::string& hostIP, const char* serverIP, int apiPort) {
     std::stringstream url;
-    url << "http://" << serverIP << ":" << controllerPort;
+    url << "http://" << serverIP << ":" << apiPort;
 
     httplib::Client client(url.str());
 
@@ -71,19 +74,35 @@ bool checkPortForward(std::string& hostIP, const char* serverIP, int controllerP
     }
 }
 
-bool requestNetworkBridge(unsigned int& hostPort, unsigned int& clientPort, const char* serverIP, int controllerPort) {
+bool requestControllerPort(unsigned int& port, const char* serverIP, int apiPort) {
     std::stringstream url;
-    url << "http://" << serverIP << ":" << controllerPort;
+    url << "http://" << serverIP << ":" << apiPort;
 
     httplib::Client httpClient(url.str());
-    std::string hostClientPair;
+    if (auto res = httpClient.Get("/port/controller")) {
+        if (res->status == 200) {
+            port = std::atoi(res->body.c_str());
+            logger.debug() << "Using controller port: " << port << std::endl;
+            return true;
+        }
+    }
 
-    logger.info() << "Requesting network bridge - ";
-    if (auto res = httpClient.Get("/request/bridge")) {
+    logger.error("Failed to request controller port");
+    return false;
+}
+
+bool requestNetworkBridge(unsigned int& hostPort, const char* serverIP, int apiPort) {
+    std::stringstream url;
+    url << "http://" << serverIP << ":" << apiPort;
+
+    httplib::Client httpClient(url.str());
+
+    logger.info() << "Requesting host port - ";
+    if (auto res = httpClient.Get("/request/port")) {
         switch (res->status) {
         case 200:
-            logger.naked("ok");
-            hostClientPair = res->body;
+            hostPort = std::atoi(res->body.c_str());
+            logger.naked() << "ok (" << hostPort << ")" << std::endl;
             break;
         case 500:
             logger.naked() << "failed with: " << res->body << std::endl;
@@ -99,82 +118,57 @@ bool requestNetworkBridge(unsigned int& hostPort, unsigned int& clientPort, cons
         return false;
     }
 
-    auto nPos = hostClientPair.find(":");
-    std::string host = hostClientPair.substr(0, nPos);
-    std::string client = hostClientPair.substr(nPos+1);
-
-    hostPort = std::atoi(host.c_str());
-    clientPort = std::atoi(client.c_str());
-
-    logger.debug() << "HostPort: " << hostPort << " ClientPort: " << clientPort << std::endl;
-
-    // TODO create network bridge
-
-    return true;
-}
-
-/*
-void createTCPBridge() {
-    logger.debug("CreateGameServerPayload triggered!");
-
-    logger.debug() << "Bridge process ID: " << bridgeProcessInfo.dwProcessId << std::endl;
     if (bridgeProcessInfo.dwProcessId > 0) {
-        logger.warn("Bridge seems to be already running...");
-        return;
+        logger.debug() << "Bridge process seems to be running: " << bridgeProcessInfo.dwProcessId << std::endl;
+
+        HANDLE hProcess = OpenProcess(PROCESS_TERMINATE, FALSE, bridgeProcessInfo.dwProcessId);
+        if (hProcess != NULL) {
+            if (!TerminateProcess(hProcess, 0))
+                logger.error("TerminateProcess failed");
+            else
+                logger.debug("Process stopped");
+
+            CloseHandle(hProcess);
+        }
+        else {
+            logger.error("hProcess is NULL");
+        }
     }
 
-    char iniPath[MAX_PATH];
+    unsigned int controllerPort;
+    if (!requestControllerPort(controllerPort, serverIP, apiPort)) {
+        return false;
+    }
+
     char exePath[MAX_PATH];
-
-    GetCurrentDirectoryA(MAX_PATH, iniPath);
-
-    strncpy_s(exePath, iniPath, MAX_PATH);
-    strcat_s(iniPath, "\\bin\\frpc.ini");
-    strcat_s(exePath, "\\bin\\frpc.exe");
-
-    logger.debug() << "frpc ini path: " << iniPath << std::endl;
-
-    CSimpleIniA ini;
-    ini.SetUnicode();
-    ini.LoadFile(iniPath);
-
-    const char* serverIP = ini.GetValue("common", "server_addr", "0.0.0.0");
-    long controllerPort = ini.GetLongValue("common", "server_controller_port", 5480);
-
-    logger.info() << "server IP: " << serverIP
-        << ", controller port: " << controllerPort << std::endl;
-
-    logger.debug("starting TCP bridge...");
+    GetCurrentDirectory(MAX_PATH, exePath);
+    strcat_s(exePath, "\\bin\\tincat3bridge.dll");
+    logger.debug() << "bridge DLL: " << exePath << std::endl;
 
     std::stringstream command;
-    command << "\"" << exePath << "\" -c .\\bin\\frpc.ini";
+    command << "\"" << exePath << "\" tcp"
+        << " -l " << lobbyData->gamePort
+        << " -r " << hostPort
+        << " -s " << serverIP
+        << " -P " << controllerPort
+        << " -u " << serverIP << ":" << hostPort
+        << " --tls_enable false";
 
-    requestRemotePort(serverIP, controllerPort);
-
-    if (bridgePort == 0) {
-        logger.error("failed to get bridge port, aborting");
-        return;
-    }
-
-    ini.SetLongValue("s2lobby", "remote_port", (long)bridgePort);
-    ini.SaveFile(iniPath);
-
-    logger.debug("Creating new process...");
+    logger.info() << "Starting bridge process (" << serverIP << ":" << hostPort << ")" << std::endl;
 
     ZeroMemory(&si, sizeof(si));
     si.cb = sizeof(si);;
     ZeroMemory(&bridgeProcessInfo, sizeof(bridgeProcessInfo));
-        
+
     CreateProcessA(NULL, (LPSTR)command.str().c_str(), NULL, NULL, false, 0, NULL, NULL, &si, &bridgeProcessInfo);
 
     logger.debug("End injected function");
+    return true;
 }
-*/
 
 
 std::string hostIP; // public IP of this client
 unsigned int hostPort = 0;
-unsigned int clientPort = 0;
 
 DWORD jmpBackAddr;
 DWORD portStrAddr = (DWORD)getMatchmakingAddress() + 0xA7EC;
@@ -186,12 +180,12 @@ void createNetBridge() {
     auto serverPort = lobbyData->apiPort;
 
     if (checkPortForward(hostIP, serverIP, serverPort)) {
-        clientPort = lobbyData->gamePort;
+        hostPort = lobbyData->gamePort;
         return;
     }
 
-    if ( ! requestNetworkBridge(hostPort, clientPort, serverIP, serverPort)) {
-        clientPort = 9999; // misused as error code for the lobby server
+    if ( ! requestNetworkBridge(hostPort, serverIP, serverPort)) {
+        hostPort = 9999; // misused as error code for the lobby server
     }
 }
 void __declspec(naked) jumperFunction() {
@@ -203,7 +197,7 @@ void __declspec(naked) jumperFunction() {
         popad
 
         //mov edx, [eax+0x2C]
-        mov edx, [clientPort]
+        mov edx, [hostPort]
         push edx
         push [portStrAddr]
         jmp [jmpBackAddr]
