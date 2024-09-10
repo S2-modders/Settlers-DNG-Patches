@@ -8,6 +8,7 @@
 #include <sstream>
 #include <iostream>
 #include <thread>
+#include <fstream>
 
 #include "utilities/Helper/Logger.h"
 
@@ -482,13 +483,13 @@ DWORD FilebufferSizePtr = 0;
 
 DWORD ret3;
 
-bool ShouldJump = false;
+bool IsEncrypted = false;
 
 void lolol2() {
     Stringbla* ptr = (Stringbla*)FilenamePtr;
-
     char* filebuffer = *(char**)FilebufferPtr;
-    ShouldJump = (*(int*)(filebuffer + 0x4)) == 808477554;
+
+    IsEncrypted = strncmp((char*)filebuffer + 0x4, "rc00", 4) == 0;
 
     logger.info(" -------- new file -------- ");
     logger.info() << "EBX content: \n"
@@ -497,9 +498,9 @@ void lolol2() {
         << "string buffer size: " << ptr->bufferSize << "\n"
         << "first file bytes: " << **(int**)FilebufferPtr << "\n"
         << "file buffer size: " << *(int*)FilebufferSizePtr << "\n"
-        << "should jump: ";
+        << "file encrypted: ";
 
-    if (ShouldJump) {
+    if (IsEncrypted) {
         logger.naked("YES");
     }
     else {
@@ -550,7 +551,7 @@ void _declspec(naked) nakedFileLoadTest() {
     }
 
     lolol2();
-    if (ShouldJump) {
+    if (IsEncrypted) {
         __asm {
             popad
             jmp[ret3]
@@ -571,6 +572,61 @@ void _declspec(naked) nakedFileLoadTest() {
 
 }
 
+void storeDecryptedData() {
+    Stringbla* ptr = (Stringbla*)FilenamePtr;
+    char* filebuffer = (char*)FilebufferPtr;
+    int filebuffersize = (int)FilebufferSizePtr;
+
+    char suffix[9] = ".decrypt";
+    int newStringSize = ptr->length + sizeof(suffix);
+    
+    char* newFilename = (char*)malloc(newStringSize);
+
+    strncpy_s(newFilename, newStringSize, ptr->filename, ptr->length);
+    strncat_s(newFilename, newStringSize, suffix, sizeof(suffix));
+
+    logger.debug() << "NEW FILENAME: " << newFilename << "\n"
+        << "filebuffersize: " << filebuffersize
+        << std::endl;
+
+    //std::fstream fileOutput;
+    std::ofstream fileOutput;
+    fileOutput.open(newFilename, std::ios::binary | std::ios::trunc);
+    fileOutput.write(filebuffer, filebuffersize);
+    fileOutput.close();
+
+    free(newFilename);
+}
+
+DWORD ret4;
+void _declspec(naked) storeEncryptedData() {
+    __asm {
+        push edx
+        push ecx
+
+        mov edx, [esp+0x10+0x8]
+        mov [FilebufferSizePtr], edx
+
+        mov ecx, [esp+0x14+0x8]
+        mov [FilebufferPtr], ecx
+
+        pop ecx
+        pop edx
+
+        pushad
+    }
+
+    storeDecryptedData();
+
+    __asm {
+        popad
+        mov esi, [esp+0x3C]
+        mov eax, [esi]
+
+        jmp[ret4]
+    }
+}
+
 void fileLoadTest() {
     DWORD* fileloadFktAddr = calcAddress(0x193B78);
 
@@ -584,7 +640,13 @@ void fileLoadTest() {
 
     if (functionInjectorReturn(fileloadFktAddr, nakedFileLoadTest, ret3, 7)) {
         //ret3 += 0x193D39 - 0x193B7F;
-        logger.info("code inject");
+        logger.info("data decrypt function inject");
+    }
+
+    DWORD* fileloadFktEndAddr = calcAddress(0x193D35);
+    
+    if (functionInjectorReturn(fileloadFktEndAddr, storeEncryptedData, ret4, 6)) {
+        logger.info("data decrypt store function inject");
     }
 }
 
