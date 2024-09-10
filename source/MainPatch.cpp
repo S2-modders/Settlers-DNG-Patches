@@ -230,7 +230,7 @@ int MainPatch::run() {
 }
 
 void MainPatch::setCursor() {
-        //auto handle = LoadImageA(hm, MAKEINTRESOURCEA(101), IMAGE_BITMAP, LR_DEFAULTSIZE, LR_DEFAULTSIZE, LR_DEFAULTCOLOR);
+    //auto handle = LoadImageA(hm, MAKEINTRESOURCEA(101), IMAGE_BITMAP, LR_DEFAULTSIZE, LR_DEFAULTSIZE, LR_DEFAULTCOLOR);
     //auto hlol = FindResource(hm, MAKEINTRESOURCE(101), "PNG");
     //auto handle = LoadResource(hm, hlol);
     //auto handle = LoadCursor(hm, MAKEINTRESOURCE(101));
@@ -466,7 +466,133 @@ bool isSettlersVersion(char* versionString) {
         || strcmp(gameVersion, versionAddon) == 0;
 }
 
+struct Stringbla {
+    DWORD unknown;
+    char* filename;
+    DWORD unknown2;
+    DWORD unknown3;
+    DWORD unknown4;
+    int length;
+    int bufferSize;
+};
+
+DWORD FilenamePtr = 0;
+DWORD FilebufferPtr = 0;
+DWORD FilebufferSizePtr = 0;
+
+DWORD ret3;
+
+bool ShouldJump = false;
+
+void lolol2() {
+    Stringbla* ptr = (Stringbla*)FilenamePtr;
+
+    char* filebuffer = *(char**)FilebufferPtr;
+    ShouldJump = (*(int*)(filebuffer + 0x4)) == 808477554;
+
+    logger.info(" -------- new file -------- ");
+    logger.info() << "EBX content: \n"
+        << "filename: " << ptr->filename << "\n"
+        << "string length: " << ptr->length << "\n"
+        << "string buffer size: " << ptr->bufferSize << "\n"
+        << "first file bytes: " << **(int**)FilebufferPtr << "\n"
+        << "file buffer size: " << *(int*)FilebufferSizePtr << "\n"
+        << "should jump: ";
+
+    if (ShouldJump) {
+        logger.naked("YES");
+    }
+    else {
+        logger.naked("NO");
+    }
+
+    logger.naked() << std::endl;
+
+    /*
+    char testName[9] = "data.lua";
+    char comparebuffer[9];
+
+    //strcpy_s(comparebuffer, 9, ptr->filename + (ptr->length - 10));
+    strcat_s(comparebuffer, 8, testName);
+
+    logger.debug() << testName << " | " << comparebuffer << std::endl;
+
+    if (strcmp(comparebuffer, testName) == 0) {
+        logger.debug("names match");
+    }
+    else {
+        logger.debug("names NO match");
+    }
+    */
+}
+
+void _declspec(naked) nakedFileLoadTest() {
+    __asm {
+        push eax
+        
+        mov eax, [esp+0x28+0x4]
+        mov [FilenamePtr], eax
+
+        mov eax, [esp + 0x28 + 0x4 + 0x4]
+        mov[FilebufferPtr], eax
+
+        mov eax, [esp + 0x28 + 0x4 + 0x4 + 0x4]
+        mov[FilebufferSizePtr], eax
+
+        pop eax
+
+        push ebx
+        push ebp
+        push esi
+        mov [esp+0x2C], eax
+
+        pushad
+    }
+
+    lolol2();
+    if (ShouldJump) {
+        __asm {
+            popad
+            jmp[ret3]
+        }
+    }
+    else {
+        // cleanup and RET
+        __asm {
+            popad
+            pop esi
+            pop ebp
+            pop ebx
+
+            add esp, 0x24
+            ret
+        }
+    }
+
+}
+
+void fileLoadTest() {
+    DWORD* fileloadFktAddr = calcAddress(0x193B78);
+
+    int time = 0;
+
+    while (*fileloadFktAddr == 0) {
+        Sleep(1);
+        time += 1;
+    }
+    logger.info() << "Function might be loaded; took:" << time << "ms" << std::endl;
+
+    if (functionInjectorReturn(fileloadFktAddr, nakedFileLoadTest, ret3, 7)) {
+        //ret3 += 0x193D39 - 0x193B7F;
+        logger.info("code inject");
+    }
+}
+
+
 int prepareMain(PatchSettings* settings) {
+    // TODO check race condition
+    fileLoadTest();
+
     /* wait a bit for the application to start up (might crash otherwise) */
     Sleep(startupDelay);
 
