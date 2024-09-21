@@ -10,8 +10,7 @@
 #include <fstream>
 
 #include "utilities/Helper/Helper.h"
-#include "utilities/sha265/SHA256.h"
-#include "utilities/sha265/Utils.h"
+#include "utilities/sha256/SHA256.h"
 
 #include "Config.h"
 
