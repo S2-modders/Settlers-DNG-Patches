@@ -6,95 +6,95 @@
 #pragma once
 
 #include <sstream>
+#include <iostream>
 #include <fstream>
 
 #include "utilities/Helper/Helper.h"
+#include "utilities/sha265/SHA256.h"
+#include "utilities/sha265/Utils.h"
 
 #include "Config.h"
 
-EngineData* loadEngineSettings(CSimpleIni& ini) {
-    auto* eData = new EngineData;
+EngineData::EngineData(CSimpleIniA& ini) {
+    bHardwareCursor = !ini.GetBoolValue("Game", "CursorFix");
+    fpsLimit = ini.GetLongValue("Game", "FPSLimit");
+    bVSync = ini.GetBoolValue("Game", "ForceVSync", true);
+    MSAA = ini.GetLongValue("Game", "ForceMSAA", 4);
+    Anisotropy = ini.GetLongValue("Game", "ForceAnisotropy", 16);
+    bVulkan = ini.GetBoolValue("Game", "UseVulkan");
 
-    eData->bHardwareCursor = !ini.GetBoolValue("Game", "CursorFix");
-    eData->fpsLimit = ini.GetLongValue("Game", "FPSLimit");
-    eData->bVSync = ini.GetBoolValue("Game", "ForceVSync", true);
-    eData->MSAA = ini.GetLongValue("Game", "ForceMSAA", 4);
-    eData->Anisotropy = ini.GetLongValue("Game", "ForceAnisotropy", 16);
-    eData->bVulkan = ini.GetBoolValue("Game", "UseVulkan");
+    bDebugMode = ini.GetBoolValue("Misc", "DebugMode");
+    bDebugWindow = ini.GetBoolValue("Misc", "DebugWindow");
 
-    eData->bDebugMode = ini.GetBoolValue("Misc", "DebugMode");
-    eData->bDebugWindow = ini.GetBoolValue("Misc", "DebugWindow");
-
-    return eData;
+    bDecryptPatch = ini.GetBoolValue("Misc", "DecryptPatch");
 }
 
-CameraData* loadCameraSettings(CSimpleIni& ini) {
-    auto* cData = new CameraData;
-
-    cData->bEnabled = ini.GetBoolValue("Camera", "enabled", true);
+CameraData::CameraData(CSimpleIniA& ini) {
+    bEnabled = ini.GetBoolValue("Camera", "enabled", true);
 
     int zoomIncr = ini.GetLongValue("Camera", "ZoomPatchStep", 1);
     switch (zoomIncr) {
     case 2:
-        cData->fZoomIncrement = 0.5f;
+        fZoomIncrement = 0.5f;
         break;
     case 3:
-        cData->fZoomIncrement = 0.25f;
+        fZoomIncrement = 0.25f;
         break;
     default:
-        cData->fZoomIncrement = 1.0f;
+        fZoomIncrement = 1.0f;
     }
 
-    cData->bWideView = ini.GetBoolValue("Camera", "WideViewMode", true);
-    cData->customZoom = ini.GetLongValue("Camera", "DebugOverrrideZoom", -1);
-
-    return cData;
+    bWideView = ini.GetBoolValue("Camera", "WideViewMode", true);
+    customZoom = ini.GetLongValue("Camera", "DebugZoomOverwrite", -1);
 }
 
-LobbyData* loadLobbySettings(CSimpleIni& ini) {
-    auto* lData = new LobbyData;
-
-    lData->bEnabled = ini.GetBoolValue("Lobby", "enabled", false);
+LobbyData::LobbyData(CSimpleIniA& ini) {
+    bEnabled = ini.GetBoolValue("Lobby", "enabled", false);
     ServerAddr addr = {
         ini.GetValue("Lobby", "ServerIP", "www.diesiedler2lobby.de"),
         (unsigned int)ini.GetLongValue("Lobby", "ServerPort", 8777)
     };
-    lData->serverAddr = addr;
-    lData->patchLevel = ini.GetLongValue("Lobby", "PatchLevel", 9212);
-    lData->bTincatDebug = ini.GetBoolValue("Lobby", "DebugMode");
-    lData->gamePort = 5479; // config option possible but IMO not needed
-    lData->apiPort = (unsigned int)ini.GetLongValue("Lobby", "ApiPort", 6801);
-    return lData;
+    serverAddr = addr;
+    patchLevel = ini.GetLongValue("Lobby", "PatchLevel", 9212);
+    bTincatDebug = ini.GetBoolValue("Lobby", "DebugMode");
+    gamePort = 5479; // config option possible but IMO not needed
+    apiPort = (unsigned int)ini.GetLongValue("Lobby", "ApiPort", 6801);
 }
 
 
-void setEngineData(char* iniPath, EngineData* eData) {
-    CSimpleIni ini;
+PatchSettings::PatchSettings(EngineData* eg, CameraData* cd, LobbyData* ld) 
+    : engineData(eg), cameraData(cd), lobbyData(ld) {
+    cursor = NULL;
+    gameVersion = V_UNKNOWN;
+}
+
+
+void EngineData::writeEngineConfig(char* path) {
+    CSimpleIniA ini;
     ini.SetUnicode(false);
 
-    ini.SetLongValue("Engine", "hardwareCursor", (long)eData->bHardwareCursor);
+    ini.SetLongValue("Engine", "hardwareCursor", (long)bHardwareCursor);
     ini.SetLongValue("Engine", "refreshRate", 0); // this setting causes more problems than it solves
     ini.SetLongValue("Engine", "useMeshCache", 1);
 
-    if (eData->bVulkan)
+    if (bVulkan)
         ini.SetLongValue("Engine", "vsync", 0);
-    else 
-        ini.SetLongValue("Engine", "vsync", eData->bVSync ? 1 : 0);
+    else
+        ini.SetLongValue("Engine", "vsync", bVSync ? 1 : 0);
 
-    remove(iniPath);
-    ini.SaveFile(iniPath);
+    remove(path);
+    ini.SaveFile(path);
 }
 
-
-void setNetworkData(char* iniPath, LobbyData* lData) {
-    CSimpleIni ini;
+void LobbyData::writeNetworkConfig(char* path) {
+    CSimpleIniA ini;
     ini.SetUnicode(false);
 
-    ini.SetLongValue("Basics", "gamePort", (long)lData->gamePort);
+    ini.SetLongValue("Basics", "gamePort", (long)gamePort);
     std::stringstream ss;
-    ss << lData->serverAddr.IP << ":" << lData->serverAddr.Port;
+    ss << serverAddr.IP << ":" << serverAddr.Port;
     ini.SetValue("Lobby", "url", ss.str().c_str());
-    ini.SetLongValue("Lobby", "patchlevel", (long)lData->patchLevel);
+    ini.SetLongValue("Lobby", "patchlevel", (long)patchLevel);
 
     // set all the remaining default values
     ini.SetLongValue("Broadcast", "broadcastPort", 6582);
@@ -102,26 +102,60 @@ void setNetworkData(char* iniPath, LobbyData* lData) {
 
     ini.SetDoubleValue("Ping", "pingFrequencyMenu", 10.0f);
     ini.SetDoubleValue("Ping", "pingFrequencyGame", 2.5f);
-    
+
     ini.SetDoubleValue("Reconnector", "timeHostWaitForClients", 30.0f);
     ini.SetDoubleValue("Reconnector", "timeClientWaits", 3.0f);
     ini.SetLongValue("Reconnector", "timesClientRetries", 5);
     ini.SetDoubleValue("Reconnector", "timeClientWaitsFailed", 4.0f);
 
-    remove(iniPath);
-    ini.SaveFile(iniPath);
+    remove(path);
+    ini.SaveFile(path);
 }
 
-void initDXconfig(char* path, EngineData* eData) {
-    // remove in case it already exists
-    remove(path);
+void EngineData::writeDXconfig(char* path) {
+    std::ofstream ofstr(path, std::ios::trunc);
 
-    std::ofstream ofstr(path);
-
-    ofstr << "d3d9.maxFrameRate = " << eData->fpsLimit << std::endl;
-    ofstr << "d3d9.forceSwapchainMSAA = " << eData->MSAA << std::endl;
-    ofstr << "d3d9.samplerAnisotropy = " << eData->Anisotropy << std::endl;
-    ofstr << "d3d9.presentInterval = " << (eData->bVSync ? 1 : 0) << std::endl;
+    ofstr << "d3d9.maxFrameRate = " << fpsLimit << std::endl;
+    ofstr << "d3d9.forceSwapchainMSAA = " << MSAA << std::endl;
+    ofstr << "d3d9.samplerAnisotropy = " << Anisotropy << std::endl;
+    ofstr << "d3d9.presentInterval = " << (bVSync ? 1 : 0) << std::endl;
 
     ofstr.close();
+}
+
+GameVersion getGameVersion(char* exePath) {
+    std::ifstream file(exePath, std::ios::binary | std::ios::ate);
+    if (!file) {
+        return V_UNKNOWN;
+    }
+
+    size_t filesize = file.tellg();
+    char* filebuffer = (char*)malloc(filesize);
+
+    file.seekg(0, std::ios::beg);
+    file.read(filebuffer, filesize);
+    file.close();
+
+    std::string checksum = sha256(filebuffer, filesize);
+    //std::cout << "CHECKSUM: " << checksum << std::endl;
+    free(filebuffer);
+
+    if (checksum == "484a8afc396df4ae0e9429b604993dcb5e238f2c0f0fe6d5085ab4620af548b7") {
+        return V_BASE_GOG;
+    }
+    else if (checksum == "178a4299a2dc441aa8ed2f32e050f9a99ef40150f42e2c1acd8b00933db1285e") {
+        return V_BASE_NOCD;
+    }
+    else if (checksum == "f461cbaa27e523a0ae8eb6fd6e318c5c21df5e2eddda9f6a4d424aa08b8c17e8") {
+        return V_ADDON_NOCD;
+    }
+    else if (checksum == "3bc844be08d3c15ccf40c0b3dc1ff19a858c01ac48738a441033b352cb1217f1") {
+        return V_BASE_GOLD;
+    }
+    else if (checksum == "091944faf932c30825fb4920d71247c427e75a497ce01fe2540ad8595f655ef9") {
+        return V_ADDON_GOLD;
+    }
+    else {
+        return V_UNSUPPORTED;
+    }
 }

@@ -22,6 +22,7 @@ using MainPatch_Logger::logger;
 const int retryCount = 4;
 const int retryTimeout = 2000;
 
+
  /* 
  * memory values 
  */
@@ -181,7 +182,6 @@ MainPatch::MainPatch(PatchData& patchData, PatchSettings* settings) : patchData(
 
 void MainPatch::startupMessage() {
     std::cout << "ZoomPatch & LobbyPatch by zocker_160 - Version: v" << version_maj << "." << version_min << "\n"
-        << "Waiting for application startup... \n"
         << std::endl;
 }
 
@@ -210,12 +210,27 @@ int MainPatch::calcMaxFramerate(int maxFrameRate, bool vSync) {
 }
 
 int MainPatch::run() {
-    if (!isWorldObject())
-        return 0;
-    
+    // delete temporary VK config file after a few seconds
+    std::thread rmThread([](char* VkPath, int sleep = 1e4) {
+        Sleep(sleep);
+        remove(VkPath);
+        }, settings->cameraData->VkConfigPath);
+    rmThread.detach();
+
+    // TODO file load decrypt patch
+    patchFileLoader();
+
+    logger.info("Waiting for application startup...");
+
+    unsigned int time = 0;
+    while (isWorldObject() == false) {
+        Sleep(1);
+        time += 1;
+    }
+    logger.info() << "Game init in " << time << "ms" << std::endl;
     logger.info("MainPatch started");
+
     //patchLobbyFilter();
-    
     //patchFogDisable();
 
     for (;; Sleep(1000)) {
@@ -259,14 +274,8 @@ void MainPatch::setCursor() {
 }
 
 bool MainPatch::isWorldObject() {
-    float* tmp = (float*)calcAddress(patchData.worldObject.base_address);
-
-    if (*tmp < 0) {
-        logger.error("WorldObject does not exist!");
-        return false;
-    }
-    else
-        return true;
+    DWORD* tmp = calcAddress(patchData.worldObject.base_address);
+    return *tmp > 0;
 }
 
 void MainPatch::patchCamera() {
@@ -435,38 +444,6 @@ bool MainPatch::isZoomOverride() {
 }
 
 
-bool isSupportedVersion(char* versionString) {
-    char versionSettlers[9] = "Version:"; // All Settlers II remakes have this
-    char tVersion[9];
-
-    if (!readBytes(versionString, tVersion, 8))
-        return false;
-
-    //memcpy(tVersion, versionString, 8);
-    tVersion[8] = 0;
-
-    //showMessage(tVersion);
-
-    return strcmp(tVersion, versionSettlers) == 0;
-}
-
-bool isSettlersVersion(char* versionString) {
-    char versionBase[15] = "Version: 11757"; // GOG version & patched CD version
-    char versionAddon[15] = "Version: 11758"; // Wikings Addon
-    char gameVersion[15];
-
-    if (!readBytes(versionString, gameVersion, 14))
-        return false;
-
-    //memcpy(gameVersion, versionString, 14);
-    gameVersion[14] = 0;
-
-    //showMessage(gameVersion);
-
-    return strcmp(gameVersion, versionBase) == 0
-        || strcmp(gameVersion, versionAddon) == 0;
-}
-
 struct Stringbla {
     DWORD unknown;
     char* filename;
@@ -480,17 +457,22 @@ struct Stringbla {
 DWORD FilenamePtr = 0;
 DWORD FilebufferPtr = 0;
 DWORD FilebufferSizePtr = 0;
-
 DWORD ret3;
 
-bool IsEncrypted = false;
+static bool IsEncrypted = false;
 
 void lolol2() {
     Stringbla* ptr = (Stringbla*)FilenamePtr;
     char* filebuffer = *(char**)FilebufferPtr;
 
-    IsEncrypted = strncmp((char*)filebuffer + 0x4, "rc00", 4) == 0;
+    IsEncrypted = strncmp(filebuffer + 0x4, "rc00", 4) == 0;
 
+    logger.debug() << "-- loading: " 
+        << IsEncrypted << " | "
+        << ptr->filename 
+        << std::endl;
+
+    /*
     logger.info(" -------- new file -------- ");
     logger.info() << "EBX content: \n"
         << "filename: " << ptr->filename << "\n"
@@ -508,22 +490,6 @@ void lolol2() {
     }
 
     logger.naked() << std::endl;
-
-    /*
-    char testName[9] = "data.lua";
-    char comparebuffer[9];
-
-    //strcpy_s(comparebuffer, 9, ptr->filename + (ptr->length - 10));
-    strcat_s(comparebuffer, 8, testName);
-
-    logger.debug() << testName << " | " << comparebuffer << std::endl;
-
-    if (strcmp(comparebuffer, testName) == 0) {
-        logger.debug("names match");
-    }
-    else {
-        logger.debug("names NO match");
-    }
     */
 }
 
@@ -548,19 +514,18 @@ void _declspec(naked) nakedFileLoadTest() {
         mov [esp+0x2C], eax
 
         pushad
+        call [lolol2]
+        popad
     }
 
-    lolol2();
     if (IsEncrypted) {
         __asm {
-            popad
-            jmp[ret3]
+            jmp [ret3]
         }
     }
     else {
         // cleanup and RET
         __asm {
-            popad
             pop esi
             pop ebp
             pop ebx
@@ -569,10 +534,9 @@ void _declspec(naked) nakedFileLoadTest() {
             ret
         }
     }
-
 }
 
-void storeDecryptedData() {
+static void storeDecryptedData() {
     Stringbla* ptr = (Stringbla*)FilenamePtr;
     char* filebuffer = (char*)FilebufferPtr;
     int filebuffersize = (int)FilebufferSizePtr;
@@ -585,11 +549,12 @@ void storeDecryptedData() {
     strncpy_s(newFilename, newStringSize, ptr->filename, ptr->length);
     strncat_s(newFilename, newStringSize, suffix, sizeof(suffix));
 
+    /*
     logger.debug() << "NEW FILENAME: " << newFilename << "\n"
         << "filebuffersize: " << filebuffersize
         << std::endl;
+    */
 
-    //std::fstream fileOutput;
     std::ofstream fileOutput;
     fileOutput.open(newFilename, std::ios::binary | std::ios::trunc);
     fileOutput.write(filebuffer, filebuffersize);
@@ -614,20 +579,17 @@ void _declspec(naked) storeEncryptedData() {
         pop edx
 
         pushad
-    }
-
-    storeDecryptedData();
-
-    __asm {
+        call [storeDecryptedData]
         popad
-        mov esi, [esp+0x3C]
+
+        mov esi, [esp + 0x3C]
         mov eax, [esi]
 
-        jmp[ret4]
+        jmp [ret4]
     }
 }
 
-void fileLoadTest() {
+void MainPatch::patchFileLoader() {
     DWORD* fileloadFktAddr = calcAddress(0x193B78);
 
     int time = 0;
@@ -639,80 +601,47 @@ void fileLoadTest() {
     logger.info() << "Function might be loaded; took:" << time << "ms" << std::endl;
 
     if (functionInjectorReturn(fileloadFktAddr, nakedFileLoadTest, ret3, 7)) {
-        //ret3 += 0x193D39 - 0x193B7F;
         logger.info("data decrypt function inject");
     }
 
     DWORD* fileloadFktEndAddr = calcAddress(0x193D35);
-    
+
     if (functionInjectorReturn(fileloadFktEndAddr, storeEncryptedData, ret4, 6)) {
         logger.info("data decrypt store function inject");
     }
 }
 
-
-int prepareMain(PatchSettings* settings) {
-    // TODO check race condition
-    fileLoadTest();
-
-    /* wait a bit for the application to start up (might crash otherwise) */
-    Sleep(startupDelay);
-
-    // delete temporary VK config file after a few seconds
-    std::thread rmThread([](char* VkPath, int sleep = 1e4) {
-        Sleep(sleep);
-        remove(VkPath);
-    }, settings->cameraData->VkConfigPath);
-    rmThread.detach();
-
+static int prepareMain(PatchSettings* settings) {
     /* check if gameVersion is supported */
-    char* sBase = (char*)calcAddress(Base_GOG::gameVersionAddr);
-    char* sBaseGold = (char*)calcAddress(Base_Gold::gameVersionAddr);
-    char* sAddon = (char*)calcAddress(Addon::gameVersionAddr);
-    char* sAddonGold = (char*)calcAddress(Addon_Gold::gameVersionAddr);
-    std::vector<char*> sVersions = { sBase, sBaseGold, sAddon, sAddonGold };
+    switch (settings->gameVersion) {
+    case V_BASE_GOG:
+        logger.info("Found DNG GOG version");
+        return MainPatch(Base_GOG::patchData, settings).run();
+        break;
 
-    bool bSupported = false;
+    case V_ADDON_NOCD:
+        logger.info("Found Wikinger Retail noCD version");
+        return MainPatch(Addon::patchData, settings).run();
+        break;
 
-    for (int i = 0; i < retryCount; i++) {
-        if (std::any_of(sVersions.begin(), sVersions.end(), isSupportedVersion)) {
-            bSupported = true;
+    case V_BASE_GOLD:
+        logger.info("Found DNG Gold Edition");
+        return MainPatch(Base_Gold::patchData, settings).run();
+        break;
+    case V_ADDON_GOLD:
+        logger.info("Found Wikinger Gold Edition");
+        return MainPatch(Addon_Gold::patchData, settings).run();
+        break;
 
-            if (isSettlersVersion(sBase)) {
-                logger.info("Found Base GOG version");
-                settings->gameVersion = V_BASE_GOG;
-                return MainPatch(Base_GOG::patchData, settings).run();
-            }
-            else if (isSettlersVersion(sBaseGold)) {
-                logger.info("Found Base Gold Edition version");
-                settings->gameVersion = V_BASE_GOLD;
-                return MainPatch(Base_Gold::patchData, settings).run();
-            }
-            else if (isSettlersVersion(sAddon)) {
-                logger.info("Found Addon version");
-                settings->gameVersion = V_ADDON;
-                return MainPatch(Addon::patchData, settings).run();
-            }
-            else if (isSettlersVersion(sAddonGold)) {
-                logger.info("Found Addon Gold Edition");
-                settings->gameVersion = V_ADDON_GOLD;
-                return MainPatch(Addon_Gold::patchData, settings).run();
-            }
-        }
-
-        logger.info("Version check retrying...");
-        Sleep(retryTimeout);
-    }
-
-    if (!bSupported) {
-        logger.error() << "This game version or editor is not supported! \n"
+    default:
+        logger.error() << "This game version is not supported! \n"
             << "Supported game versions are: \n"
             << "- GOG (11757) \n"
-            << "- Base Game Gold Edition (11757) \n"
-            << "- Wikings Addon (11758) \n"
+            << "- DNG Gold Edition (11757) \n"
             << "- Wikings Addon Gold Edition (11758)"
             << std::endl;
         //MessageBoxA(NULL, "This game version is not supported!", "Widescreen Fix ERROR", MB_OK);
+        break;
     }
 
     return 0;

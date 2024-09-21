@@ -49,6 +49,8 @@ private:
 
     bool isWorldObject();
 
+    void patchFileLoader();
+
     void patchCamera();
     void patchZoomIncrement();
 

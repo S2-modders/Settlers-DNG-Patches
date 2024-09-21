@@ -207,7 +207,7 @@ void __declspec(naked) jumperFunction() {
 LobbyPatch::LobbyPatch(PatchSettings* settings) {
     this->settings = settings;
 
-    lobbyData = settings->lobbyData;
+    lobbyData = this->settings->lobbyData;
 }
 
 int LobbyPatch::run() {
