@@ -239,21 +239,10 @@ bool WINAPI DllMain(HMODULE hModule, DWORD fdwReason, LPVOID lpReserved) {
     {
     case DLL_PROCESS_ATTACH:
     {
-        HMODULE baseModule;
-        GetModuleHandleExA(
-            GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
-            (LPCSTR)getBaseAddress(),
-            &baseModule
-        );
-        //GetModuleHandleExA(
-        // GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
-        // (LPCSTR)&f_Direct3DCreate9,
-        // &hm
-        // );
+        HMODULE baseModule = getBaseModule();
 
         char mainExecutable[MAX_PATH];
         GetModuleFileNameA(baseModule, mainExecutable, MAX_PATH);
-        GameVersion gameVersion = getGameVersion(mainExecutable);
 
         char configPath[MAX_PATH];
         getGameDirectory(baseModule, configPath, MAX_PATH, "\\bin\\d3d9.ini", 1);
@@ -277,7 +266,7 @@ bool WINAPI DllMain(HMODULE hModule, DWORD fdwReason, LPVOID lpReserved) {
         auto* cameraData = new CameraData(config);
         auto* lobbyData = new LobbyData(config);
         auto* settings = new PatchSettings(engineData, cameraData, lobbyData);
-        settings->gameVersion = gameVersion;
+        settings->gameVersion = getGameVersion(mainExecutable);
 
         Logging::Logger logger("DX9", logFile, engineData->bDebugWindow);
         MainPatch::startupMessage();

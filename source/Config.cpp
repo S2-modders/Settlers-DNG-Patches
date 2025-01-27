@@ -10,7 +10,6 @@
 #include <fstream>
 
 #include "utilities/Helper/Helper.h"
-#include "utilities/sha256/SHA256.h"
 
 #include "Config.h"
 
@@ -123,21 +122,11 @@ void EngineData::writeDXconfig(char* path) {
 }
 
 GameVersion getGameVersion(char* exePath) {
-    std::ifstream file(exePath, std::ios::binary | std::ios::ate);
-    if (!file) {
+    std::string checksum;
+
+    if (!getFileChecksum(exePath, checksum)) {
         return V_UNKNOWN;
     }
-
-    size_t filesize = file.tellg();
-    char* filebuffer = (char*)malloc(filesize);
-
-    file.seekg(0, std::ios::beg);
-    file.read(filebuffer, filesize);
-    file.close();
-
-    std::string checksum = sha256(filebuffer, filesize);
-    //std::cout << "CHECKSUM: " << checksum << std::endl;
-    free(filebuffer);
 
     if (checksum == "484a8afc396df4ae0e9429b604993dcb5e238f2c0f0fe6d5085ab4620af548b7") {
         return V_BASE_GOG;
