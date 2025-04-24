@@ -3,13 +3,12 @@
  *
  * This source code is licensed under GPL-v3
  */
-#define WIN32_LEAN_AND_MEAN
 
-#include "d3d9.h"
+#include <Helper.h>
+#include <Logger.h>
+#include <SimpleIni.h>
 
-#include "utilities/Helper/Helper.h"
-#include "utilities/Helper/Logger.h"
-#include "utilities/SimpleIni/SimpleIni.h"
+#include "f_d3d9.h"
 
 #include "Config.h"
 #include "Lobby.h"
@@ -338,8 +337,8 @@ bool WINAPI DllMain(HMODULE hModule, DWORD fdwReason, LPVOID lpReserved) {
 
         if (engineData->bVulkan || isWine()) {
             if (!engineData->bDebugMode)
-                SetEnvironmentVariable("DXVK_LOG_LEVEL", "none");
-            SetEnvironmentVariable("DXVK_CONFIG_FILE", cameraData->VkConfigPath);
+                SetEnvironmentVariableA("DXVK_LOG_LEVEL", "none");
+            SetEnvironmentVariableA("DXVK_CONFIG_FILE", cameraData->VkConfigPath);
 
             logger.debug("Writing Vk config cache");
             engineData->writeDXconfig(cameraData->VkConfigPath);

@@ -5,12 +5,9 @@
  *
  */
 
-#include <sstream>
-#include <iostream>
-#include <thread>
-#include <fstream>
+#include "pch.h"
 
-#include "utilities/Helper/Logger.h"
+#include <Logger.h>
 
 #include "MainPatch.h"
 
@@ -317,7 +314,7 @@ bool MainPatch::calcZoomValue() {
     }
 
     /* maxZoomValue will be set depending on the aspect ratio of the screen */
-    float aspr = calcAspectRatio();
+    float aspr = getAspectRatio();
 
     if (aspr <= 0.0f || aspr > 20.0f) {
         logger.error() << "ASPR is ridiculous (" << aspr << ")" << std::endl;

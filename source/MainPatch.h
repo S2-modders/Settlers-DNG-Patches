@@ -6,9 +6,7 @@
  */
 #pragma once
 
-#include <Windows.h>
-
-#include "utilities/Helper/Helper.h"
+#include <Helper.h>
 
 #include "Config.h"
 

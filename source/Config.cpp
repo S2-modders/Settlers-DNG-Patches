@@ -3,14 +3,10 @@
  *
  * This source code is licensed under GPL-v3
  */
-#pragma once
 
-#include <sstream>
-#include <iostream>
-#include <fstream>
+#include "pch.h"
 
-#include "utilities/Helper/Helper.h"
-
+#include <Helper.h>
 #include "Config.h"
 
 EngineData::EngineData(CSimpleIniA& ini) {

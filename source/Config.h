@@ -5,7 +5,7 @@
  */
 #pragma once
 
-#include "utilities/SimpleIni/SimpleIni.h"
+#include <SimpleIni.h>
 
 const int startupDelay = 4000; // in ms
 
