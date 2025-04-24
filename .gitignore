@@ -1,4 +1,6 @@
 .directory
+.vscode
+
 premake*
 VersionInfo*
 _*
@@ -20,3 +22,5 @@ data/d3d9vk*
 .vs/
 .idea/
 build/
+
+Makefile
