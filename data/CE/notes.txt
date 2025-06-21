@@ -1,0 +1,15 @@
+NOCD exe
+
+005F98E7 - F6 C4 05              - test ah,05 { 5 }
+005F98F5 - D9 5E 20              - fstp dword ptr [esi+20]
+005F98EA - EB 13                 - jmp 005F98FF
+02986F00
+
+offset default camera zoom 0x1F9049
+
+
+Schreiben bei Kartenladen
+exe+3C4E4 - 89 41 4C
+
+Schreiben bei Hauptmenü Singleplayer Drücken
+exe+94E4 - 89 5E 4C

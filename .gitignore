@@ -1,4 +1,6 @@
 .directory
+.vscode
+
 premake*
 VersionInfo*
 _*
@@ -16,7 +18,10 @@ data/*.dll
 data/d3d9vk*
 
 *.vcxproj*
+*.code-workspace
 
 .vs/
 .idea/
 build/
+
+Makefile

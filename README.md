@@ -28,10 +28,10 @@ you can also just compile it from source ;)
 
 ## Showcase
 ### Original
-![originalunpatched](images/original.png)
+![originalunpatched](data/images/original.png)
 
 ### Patched
-![patched](images/WidescreenPatch.jpg)
+![patched](data/images/WidescreenPatch.jpg)
 
 ### Patched + FogPatch
-![patchedandfog](images/WidescreenPatch_FogPatch.jpg)
+![patchedandfog](data/images/WidescreenPatch_FogPatch.jpg)

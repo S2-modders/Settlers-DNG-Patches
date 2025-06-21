@@ -6,36 +6,34 @@
  */
 #pragma once
 
-#include <Windows.h>
-
-#include "utilities/Helper/Helper.h"
+#include <Helper.h>
 
 #include "Config.h"
 
 const int version_maj = 2;
-const int version_min = 0;
+const int version_min = 1;
 
 
 struct PatchData {
     memoryPTR worldObject;
     memoryPTR maxZoom;
     memoryPTR currZoom;
-    DWORD lobbyVersionFilterAddr;
-    DWORD gameVersionAddr;
     DWORD zoomIncrAddr;
     DWORD zoomDecrAddr;
+    DWORD fileLoadAddr;
+    DWORD fileLoadEndAddr;
+    DWORD lobbyVersionFilterAddr;
 };
 
 DWORD WINAPI MainPatchThread(LPVOID param);
 
 class MainPatch {
 public:
-    explicit MainPatch(PatchData& patchData, PatchSettings* settings);
-
-    int run();
     static void startupMessage();
-
     static int calcMaxFramerate(int maxFrameRate = 0, bool vSync = true);
+
+    explicit MainPatch(PatchData& patchData, PatchSettings* settings);
+    int run();
 
 private:
     PatchData& patchData;
@@ -47,7 +45,11 @@ private:
 
     float newZoomValue = 4.0f; // 4 is the default zoom value
 
-    bool isWorldObject();
+    void waitGameLoad();
+    long long waitGameInit();
+
+    void patchFileLoad();
+    void patchFileStore();
 
     void patchCamera();
     void patchZoomIncrement();

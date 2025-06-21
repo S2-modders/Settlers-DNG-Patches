@@ -3,13 +3,12 @@
  *
  * This source code is licensed under GPL-v3
  */
-#define WIN32_LEAN_AND_MEAN
 
-#include "d3d9.h"
+#include <Helper.h>
+#include <Logger.h>
+#include <SimpleIni.h>
 
-#include "utilities/Helper/Helper.h"
-#include "utilities/Helper/Logger.h"
-#include "utilities/SimpleIni/SimpleIni.h"
+#include "f_d3d9.h"
 
 #include "Config.h"
 #include "Lobby.h"
@@ -232,65 +231,67 @@ HCURSOR test(HMODULE hm) {
 DllMain
 *************************/
 
-FILE* f;
-HMODULE hm = NULL;
-CSimpleIniA config;
-char VkConfigPath[MAX_PATH];
 
+static char VkConfigPath[MAX_PATH];
 
 bool WINAPI DllMain(HMODULE hModule, DWORD fdwReason, LPVOID lpReserved) {
     switch (fdwReason)
     {
     case DLL_PROCESS_ATTACH:
     {
-        char path[MAX_PATH];
-        GetModuleHandleExA(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT, (LPCSTR)&f_Direct3DCreate9, &hm);
-        getGameDirectory(hm, path, MAX_PATH, "\\bin\\d3d9.ini", 1);
+        HMODULE baseModule = getBaseModule();
 
+        char mainExecutable[MAX_PATH];
+        GetModuleFileNameA(baseModule, mainExecutable, MAX_PATH);
+
+        char configPath[MAX_PATH];
+        getGameDirectory(baseModule, configPath, MAX_PATH, "\\bin\\d3d9.ini", 1);
+        
         char engineINI[MAX_PATH];
-        getGameDirectory(hm, engineINI, MAX_PATH, "\\data\\settings\\engine.ini", 1);
+        getGameDirectory(baseModule, engineINI, MAX_PATH, "\\data\\settings\\engine.ini", 1);
 
         char networkINI[MAX_PATH];
-        getGameDirectory(hm, networkINI, MAX_PATH, "\\data\\settings\\network.ini", 1);
+        getGameDirectory(baseModule, networkINI, MAX_PATH, "\\data\\settings\\network.ini", 1);
 
         char logFile[MAX_PATH];
-        getGameDirectory(hm, logFile, MAX_PATH, "\\bin\\d3d9.log", 1);
+        getGameDirectory(baseModule, logFile, MAX_PATH, "\\bin\\d3d9.log", 1);
         remove(logFile);
 
+        CSimpleIniA config;
+
         config.SetUnicode();
-        config.LoadFile(path);
+        config.LoadFile(configPath);
 
-        EngineData* engineData = loadEngineSettings(config);
-        CameraData* cameraData = loadCameraSettings(config);
-        LobbyData* lobbyData = loadLobbySettings(config);
+        auto* gameSettings = new GameSettings(config);
+        auto* cameraData = new CameraData(config);
+        auto* lobbySettings = new LobbySettings(config);
+        auto* settings = new PatchSettings(gameSettings, cameraData, lobbySettings);
+        settings->gameVersion = getGameVersion(mainExecutable);
 
-        auto settings = new PatchSettings;
-        settings->gameVersion = V_UNKNOWN;
-        settings->engineData = engineData;
-        settings->cameraData = cameraData;
-        settings->lobbyData = lobbyData;
-
-        Logging::Logger logger("DX9", logFile, engineData->bDebugWindow);
+        Logging::Logger logger("DX9", logFile, gameSettings->bDebugWindow);
         MainPatch::startupMessage();
 
-        if (engineData->bDebugWindow)
+        logger.debug() << "launching from: " << mainExecutable << std::endl;
+
+        if (gameSettings->bDebugWindow)
             logger.info("logging to DebugWindow");
         else
             logger.info() << "logging to " << logFile << std::endl;
 
         int refreshRate = getDesktopRefreshRate();
-        engineData->fpsLimit = MainPatch::calcMaxFramerate(engineData->fpsLimit, engineData->bVSync);
+        gameSettings->fpsLimit = MainPatch::calcMaxFramerate(gameSettings->fpsLimit, gameSettings->bVSync);
+
         logger.debug() << "Detected refresh rate: " << refreshRate << "Hz | "
-            << "Enforced fps limit: " << engineData->fpsLimit << "fps"
+            << "Enforced fps limit: " << gameSettings->fpsLimit << "fps"
             << std::endl;
 
-        if (engineData->bVulkan) {
+        if (gameSettings->bVulkan) {
             if (isVulkanSupported()) {
                 logger.debug("Vulkan supported!");
             }
             else {
                 logger.debug("Vulkan NOT supported!");
-                engineData->bVulkan = false;
+                gameSettings->bVulkan = false;
             }
         }
         else {
@@ -298,21 +299,23 @@ bool WINAPI DllMain(HMODULE hModule, DWORD fdwReason, LPVOID lpReserved) {
         }
 
         logger.debug("Setting engine INI");
-        setEngineData(engineINI, engineData);
+        gameSettings->writeEngineConfig(engineINI);
 
-        if (lobbyData->bEnabled) {
+        if (lobbySettings->bEnabled) {
             logger.debug("Setting network INI");
-            setNetworkData(networkINI, lobbyData);
+            lobbySettings->writeNetworkConfig(networkINI);
         }
 
-        if (!isWine() && engineData->bVulkan) {
-            getGameDirectory(hm, path, MAX_PATH, "\\bin\\__config_cache", 1);
+        char path[MAX_PATH];
+
+        if (!isWine() && gameSettings->bVulkan) {
+            getGameDirectory(baseModule, path, MAX_PATH, "\\bin\\__config_cache", 1);
             memcpy_s(cameraData->VkConfigPath, MAX_PATH, path, MAX_PATH);
             memcpy_s(VkConfigPath, MAX_PATH, path, MAX_PATH);
             //logger.debug() << "Vk config cache location: " << VkConfigPath << std::endl;
 
             logger.info() << "Using shipped DX9: ";
-            getGameDirectory(hm, path, MAX_PATH, "\\bin\\d3d9vk.dll", 1);
+            getGameDirectory(baseModule, path, MAX_PATH, "\\bin\\d3d9vk.dll", 1);
 
             bFPSLimit = false;
         }
@@ -320,12 +323,12 @@ bool WINAPI DllMain(HMODULE hModule, DWORD fdwReason, LPVOID lpReserved) {
             // use d3d9 provided by the system
             logger.info() << "Using system DX9: ";
 
-            GetSystemDirectory(path, MAX_PATH);
+            GetSystemDirectoryA(path, MAX_PATH);
             strcat_s(path, "\\d3d9.dll");
 
-            if (engineData->fpsLimit > 0) {
+            if (gameSettings->fpsLimit > 0) {
                 bFPSLimit = true;
-                fFPSLimit = (float)engineData->fpsLimit;
+                fFPSLimit = (float)gameSettings->fpsLimit;
             }
             else
                 bFPSLimit = false;
@@ -333,21 +336,22 @@ bool WINAPI DllMain(HMODULE hModule, DWORD fdwReason, LPVOID lpReserved) {
 
         logger.naked(path);
 
-        if (engineData->bVulkan || isWine()) {
-            if (!engineData->bDebugMode)
-                SetEnvironmentVariable("DXVK_LOG_LEVEL", "none");
-            SetEnvironmentVariable("DXVK_CONFIG_FILE", cameraData->VkConfigPath);
+        if (gameSettings->bVulkan || isWine()) {
+            if (!gameSettings->bDebugMode)
+                SetEnvironmentVariableA("DXVK_LOG_LEVEL", "none");
+            SetEnvironmentVariableA("DXVK_CONFIG_FILE", cameraData->VkConfigPath);
 
             logger.debug("Writing Vk config cache");
-            initDXconfig(cameraData->VkConfigPath, engineData);
+            gameSettings->writeDXconfig(cameraData->VkConfigPath);
         }
+
 
         CreateThread(0, 0, MainPatchThread, settings, 0, 0);
 
-        if (lobbyData->bEnabled)
+        if (lobbySettings->bEnabled)
             CreateThread(0, 0, LobbyPatchThread, settings, 0, 0);
 
-        d3d9.dll = LoadLibrary(path);
+        d3d9.dll = LoadLibraryA(path);
         d3d9.D3DPERF_BeginEvent = (LPD3DPERF_BEGINEVENT)GetProcAddress(d3d9.dll, "D3DPERF_BeginEvent");
         d3d9.D3DPERF_EndEvent = (LPD3DPERF_ENDEVENT)GetProcAddress(d3d9.dll, "D3DPERF_EndEvent");
         d3d9.D3DPERF_GetStatus = (LPD3DPERF_GETSTATUS)GetProcAddress(d3d9.dll, "D3DPERF_GetStatus");

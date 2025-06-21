@@ -5,17 +5,21 @@
  */
 #pragma once
 
-#include "utilities/SimpleIni/SimpleIni.h"
+#include <SimpleIni.h>
 
 const int startupDelay = 4000; // in ms
 
 enum GameVersion {
-    V_BASE_GOG,
-    V_BASE_GOLD,
-    V_ADDON,
-    V_ADDON_GOLD,
-    V_UNKNOWN,
-    V_UNSUPPORTED
+    V_BASE_GOG, // base game GOG (11757)
+
+    V_BASE_NOCD, // base game Retail noCD (11757)
+    V_ADDON_NOCD, // addon Retail noCD (11758)
+
+    V_BASE_GOLD, // base game Gold Edition (11757)
+    V_ADDON_GOLD, // addon Gold Edition (11758)
+
+    V_UNSUPPORTED,
+    V_UNKNOWN
 };
 
 struct ServerAddr {
@@ -23,15 +27,21 @@ struct ServerAddr {
     unsigned int Port;
 };
 
-struct EngineData {
+struct GameSettings {
     bool bHardwareCursor;
     bool bVSync;
     bool bVulkan;
     bool bDebugMode;
     bool bDebugWindow;
+    bool bFileLoadPatch;
+    bool bFileStorePatch;
     int fpsLimit;
     int MSAA;
     int Anisotropy;
+
+    GameSettings(CSimpleIniA& ini);
+    void writeEngineConfig(char* path);
+    void writeDXconfig(char* path);
 };
 
 struct CameraData {
@@ -40,31 +50,32 @@ struct CameraData {
     float fZoomIncrement;
     int customZoom;
     char VkConfigPath[MAX_PATH];
+
+    CameraData(CSimpleIniA& ini);
 };
 
-struct LobbyData {
+struct LobbySettings {
     bool bEnabled;
     bool bTincatDebug;
+    bool bCreateBridge;
     //bool bNetworkPatch;
     unsigned int patchLevel;
     unsigned int gamePort;
     ServerAddr serverAddr;
     unsigned int apiPort;
+
+    LobbySettings(CSimpleIniA& ini);
+    void writeNetworkConfig(char* path);
 };
 
 struct PatchSettings {
     HCURSOR cursor;
     GameVersion gameVersion;
-    EngineData* engineData;
+    GameSettings* gameSettings;
     CameraData* cameraData;
-    LobbyData* lobbyData;
+    LobbySettings* lobbySettings;
+
+    PatchSettings(GameSettings* eg, CameraData* cd, LobbySettings* ld);
 };
 
-EngineData* loadEngineSettings(CSimpleIni& ini);
-CameraData* loadCameraSettings(CSimpleIni& ini);
-LobbyData* loadLobbySettings(CSimpleIni& ini);
-
-void setEngineData(char* iniPath, EngineData* eData);
-void setNetworkData(char* iniPath, LobbyData* lData);
-
-void initDXconfig(char* path, EngineData* eData);
+GameVersion getGameVersion(char* exePath);

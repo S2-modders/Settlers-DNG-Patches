@@ -4,22 +4,19 @@
  * This source code is licensed under GPL-v3
  *
  */ 
-#define WIN32_LEAN_AND_MEAN
+
+#include "pch.h"
 
 // this is here correctly, DO NOT TOUCH
-#include "utilities/httplib/httplib.h"
+#include <httplib.h>
 
-#include <Windows.h>
-
-#include <sstream>
-#include <thread>
+#include <Helper.h>
+#include <Logger.h>
+#include <SimpleIni.h>
 
 #include "Config.h"
 #include "Lobby.h"
 
-#include "utilities/Helper/Helper.h"
-#include "utilities/Helper/Logger.h"
-#include "utilities/SimpleIni/SimpleIni.h"
 
 namespace Lobby_Logger {
     Logging::Logger logger("LOBBY");
@@ -34,9 +31,9 @@ DWORD CreateGamePayloadPortHook = 0x60FA;
 const int retryCount = 10;
 const int retryTimeout = 1000;
 
-LobbyData* lobbyData;
+LobbySettings* lobbyData;
 
-STARTUPINFO si;
+LPSTARTUPINFOA si;
 PROCESS_INFORMATION bridgeProcessInfo;
 
 
@@ -141,7 +138,7 @@ bool requestNetworkBridge(unsigned int& hostPort, const char* serverIP, int apiP
     }
 
     char exePath[MAX_PATH];
-    GetCurrentDirectory(MAX_PATH, exePath);
+    GetCurrentDirectoryA(MAX_PATH, exePath);
     strcat_s(exePath, "\\bin\\tincat3bridge.dll");
     logger.debug() << "bridge DLL: " << exePath << std::endl;
 
@@ -156,11 +153,11 @@ bool requestNetworkBridge(unsigned int& hostPort, const char* serverIP, int apiP
 
     logger.info() << "Starting bridge process (" << serverIP << ":" << hostPort << ")" << std::endl;
 
-    ZeroMemory(&si, sizeof(si));
-    si.cb = sizeof(si);;
+    ZeroMemory(si, sizeof(si));
+    si->cb = sizeof(si);
     ZeroMemory(&bridgeProcessInfo, sizeof(bridgeProcessInfo));
 
-    CreateProcessA(NULL, (LPSTR)command.str().c_str(), NULL, NULL, false, 0, NULL, NULL, &si, &bridgeProcessInfo);
+    CreateProcessA(NULL, (LPSTR)command.str().c_str(), NULL, NULL, false, 0, NULL, NULL, si, &bridgeProcessInfo);
 
     logger.debug("End injected function");
     return true;
@@ -169,6 +166,7 @@ bool requestNetworkBridge(unsigned int& hostPort, const char* serverIP, int apiP
 
 std::string hostIP; // public IP of this client
 unsigned int hostPort = 0;
+bool createBridge;
 
 DWORD jmpBackAddr;
 DWORD portStrAddr = (DWORD)getMatchmakingAddress() + 0xA7EC;
@@ -184,16 +182,14 @@ void createNetBridge() {
         return;
     }
 
-    if ( ! requestNetworkBridge(hostPort, serverIP, serverPort)) {
+    if (createBridge && !requestNetworkBridge(hostPort, serverIP, serverPort)) {
         hostPort = 9999; // misused as error code for the lobby server
     }
 }
 void __declspec(naked) jumperFunction() {
     __asm {
         pushad
-    }
-    createNetBridge();
-    __asm {
+        call [createNetBridge]
         popad
 
         //mov edx, [eax+0x2C]
@@ -207,18 +203,21 @@ void __declspec(naked) jumperFunction() {
 LobbyPatch::LobbyPatch(PatchSettings* settings) {
     this->settings = settings;
 
-    lobbyData = settings->lobbyData;
+    lobbyData = this->settings->lobbySettings;
 }
 
 int LobbyPatch::run() {
     logger.info("LobbyPatch started");
 
-//    if (settings->lobbyData->bTincatDebug)
-//        setTincatDebugMode();
+#if 0
+    if (settings->lobbySettings->bTincatDebug) {
+        setTincatDebugMode();
+    }
+
+    patchLobbyFilter();
+#endif
 
     hookCreateGameServerPayload();
-    //patchLobbyFilter();
-
     return 0;
 }
 
@@ -235,6 +234,10 @@ void LobbyPatch::setTincatDebugMode() {
 
 void LobbyPatch::hookCreateGameServerPayload() {
     logger.debug("Installing hook for ServerPayload");
+
+    hostPort = settings->lobbySettings->gamePort;
+    createBridge = settings->lobbySettings->bCreateBridge;
+
     DWORD hookAddr = (DWORD)getMatchmakingAddress() + CreateGamePayloadPortHook;
     functionInjectorReturn((DWORD*)hookAddr, jumperFunction, jmpBackAddr, 9);
 }
