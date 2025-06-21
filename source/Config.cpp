@@ -128,18 +128,20 @@ GameVersion getGameVersion(char* exePath) {
     if (checksum == "484a8afc396df4ae0e9429b604993dcb5e238f2c0f0fe6d5085ab4620af548b7") {
         return V_BASE_GOG;
     }
-    else if (checksum == "178a4299a2dc441aa8ed2f32e050f9a99ef40150f42e2c1acd8b00933db1285e") {
-        return V_BASE_NOCD;
-    }
-    else if (checksum == "f461cbaa27e523a0ae8eb6fd6e318c5c21df5e2eddda9f6a4d424aa08b8c17e8") {
-        return V_ADDON_NOCD;
-    }
     else if (checksum == "3bc844be08d3c15ccf40c0b3dc1ff19a858c01ac48738a441033b352cb1217f1") {
         return V_BASE_GOLD;
     }
     else if (checksum == "091944faf932c30825fb4920d71247c427e75a497ce01fe2540ad8595f655ef9") {
         return V_ADDON_GOLD;
     }
+#if 0
+    else if (checksum == "178a4299a2dc441aa8ed2f32e050f9a99ef40150f42e2c1acd8b00933db1285e") {
+        return V_BASE_NOCD;
+    }
+    else if (checksum == "f461cbaa27e523a0ae8eb6fd6e318c5c21df5e2eddda9f6a4d424aa08b8c17e8") {
+        return V_ADDON_NOCD;
+    }
+#endif
     else {
         return V_UNSUPPORTED;
     }
