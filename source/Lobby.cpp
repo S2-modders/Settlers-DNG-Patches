@@ -31,7 +31,7 @@ DWORD CreateGamePayloadPortHook = 0x60FA;
 const int retryCount = 10;
 const int retryTimeout = 1000;
 
-LobbyData* lobbyData;
+LobbySettings* lobbyData;
 
 LPSTARTUPINFOA si;
 PROCESS_INFORMATION bridgeProcessInfo;
@@ -166,6 +166,7 @@ bool requestNetworkBridge(unsigned int& hostPort, const char* serverIP, int apiP
 
 std::string hostIP; // public IP of this client
 unsigned int hostPort = 0;
+bool createBridge;
 
 DWORD jmpBackAddr;
 DWORD portStrAddr = (DWORD)getMatchmakingAddress() + 0xA7EC;
@@ -181,7 +182,7 @@ void createNetBridge() {
         return;
     }
 
-    if ( ! requestNetworkBridge(hostPort, serverIP, serverPort)) {
+    if (createBridge && !requestNetworkBridge(hostPort, serverIP, serverPort)) {
         hostPort = 9999; // misused as error code for the lobby server
     }
 }
@@ -202,18 +203,21 @@ void __declspec(naked) jumperFunction() {
 LobbyPatch::LobbyPatch(PatchSettings* settings) {
     this->settings = settings;
 
-    lobbyData = this->settings->lobbyData;
+    lobbyData = this->settings->lobbySettings;
 }
 
 int LobbyPatch::run() {
     logger.info("LobbyPatch started");
 
-//    if (settings->lobbyData->bTincatDebug)
-//        setTincatDebugMode();
+#if 0
+    if (settings->lobbySettings->bTincatDebug) {
+        setTincatDebugMode();
+    }
+
+    patchLobbyFilter();
+#endif
 
     hookCreateGameServerPayload();
-    //patchLobbyFilter();
-
     return 0;
 }
 
@@ -230,6 +234,10 @@ void LobbyPatch::setTincatDebugMode() {
 
 void LobbyPatch::hookCreateGameServerPayload() {
     logger.debug("Installing hook for ServerPayload");
+
+    hostPort = settings->lobbySettings->gamePort;
+    createBridge = settings->lobbySettings->bCreateBridge;
+
     DWORD hookAddr = (DWORD)getMatchmakingAddress() + CreateGamePayloadPortHook;
     functionInjectorReturn((DWORD*)hookAddr, jumperFunction, jmpBackAddr, 9);
 }

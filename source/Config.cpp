@@ -43,7 +43,7 @@ CameraData::CameraData(CSimpleIniA& ini) {
     customZoom = ini.GetLongValue("Camera", "DebugZoomOverwrite", -1);
 }
 
-LobbyData::LobbyData(CSimpleIniA& ini) {
+LobbySettings::LobbySettings(CSimpleIniA& ini) {
     bEnabled = ini.GetBoolValue("Lobby", "enabled", false);
     ServerAddr addr = {
         ini.GetValue("Lobby", "ServerIP", "www.diesiedler2lobby.de"),
@@ -54,11 +54,17 @@ LobbyData::LobbyData(CSimpleIniA& ini) {
     bTincatDebug = ini.GetBoolValue("Lobby", "DebugMode");
     gamePort = 5479; // config option possible but IMO not needed
     apiPort = (unsigned int)ini.GetLongValue("Lobby", "ApiPort", 6801);
+
+#if 0
+    bCreateBridge = ini.GetBoolValue("Lobby", "Bridge");
+#else
+    bCreateBridge = false;
+#endif
 }
 
 
-PatchSettings::PatchSettings(GameSettings* eg, CameraData* cd, LobbyData* ld) 
-    : gameSettings(eg), cameraData(cd), lobbyData(ld) {
+PatchSettings::PatchSettings(GameSettings* eg, CameraData* cd, LobbySettings* ld) 
+    : gameSettings(eg), cameraData(cd), lobbySettings(ld) {
     cursor = NULL;
     gameVersion = V_UNKNOWN;
 }
@@ -81,7 +87,7 @@ void GameSettings::writeEngineConfig(char* path) {
     ini.SaveFile(path);
 }
 
-void LobbyData::writeNetworkConfig(char* path) {
+void LobbySettings::writeNetworkConfig(char* path) {
     CSimpleIniA ini;
     ini.SetUnicode(false);
 

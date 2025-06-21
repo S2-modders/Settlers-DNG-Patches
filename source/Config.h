@@ -54,16 +54,17 @@ struct CameraData {
     CameraData(CSimpleIniA& ini);
 };
 
-struct LobbyData {
+struct LobbySettings {
     bool bEnabled;
     bool bTincatDebug;
+    bool bCreateBridge;
     //bool bNetworkPatch;
     unsigned int patchLevel;
     unsigned int gamePort;
     ServerAddr serverAddr;
     unsigned int apiPort;
 
-    LobbyData(CSimpleIniA& ini);
+    LobbySettings(CSimpleIniA& ini);
     void writeNetworkConfig(char* path);
 };
 
@@ -72,9 +73,9 @@ struct PatchSettings {
     GameVersion gameVersion;
     GameSettings* gameSettings;
     CameraData* cameraData;
-    LobbyData* lobbyData;
+    LobbySettings* lobbySettings;
 
-    PatchSettings(GameSettings* eg, CameraData* cd, LobbyData* ld);
+    PatchSettings(GameSettings* eg, CameraData* cd, LobbySettings* ld);
 };
 
 GameVersion getGameVersion(char* exePath);

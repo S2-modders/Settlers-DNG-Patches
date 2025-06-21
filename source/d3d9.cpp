@@ -264,8 +264,8 @@ bool WINAPI DllMain(HMODULE hModule, DWORD fdwReason, LPVOID lpReserved) {
 
         auto* gameSettings = new GameSettings(config);
         auto* cameraData = new CameraData(config);
-        auto* lobbyData = new LobbyData(config);
-        auto* settings = new PatchSettings(gameSettings, cameraData, lobbyData);
+        auto* lobbySettings = new LobbySettings(config);
+        auto* settings = new PatchSettings(gameSettings, cameraData, lobbySettings);
         settings->gameVersion = getGameVersion(mainExecutable);
 
         Logging::Logger logger("DX9", logFile, gameSettings->bDebugWindow);
@@ -301,9 +301,9 @@ bool WINAPI DllMain(HMODULE hModule, DWORD fdwReason, LPVOID lpReserved) {
         logger.debug("Setting engine INI");
         gameSettings->writeEngineConfig(engineINI);
 
-        if (lobbyData->bEnabled) {
+        if (lobbySettings->bEnabled) {
             logger.debug("Setting network INI");
-            lobbyData->writeNetworkConfig(networkINI);
+            lobbySettings->writeNetworkConfig(networkINI);
         }
 
         char path[MAX_PATH];
@@ -348,7 +348,7 @@ bool WINAPI DllMain(HMODULE hModule, DWORD fdwReason, LPVOID lpReserved) {
 
         CreateThread(0, 0, MainPatchThread, settings, 0, 0);
 
-        if (lobbyData->bEnabled)
+        if (lobbySettings->bEnabled)
             CreateThread(0, 0, LobbyPatchThread, settings, 0, 0);
 
         d3d9.dll = LoadLibraryA(path);
