@@ -242,7 +242,7 @@ void LobbyPatch::hookCreateGameServerPayload() {
     hostPort = settings->lobbySettings->gamePort;
     createBridge = settings->lobbySettings->bCreateBridge;
 
-    DWORD* hookAddr = calcModuleAddress(getModuleAddress("matchmaking.dll"), CreateGamePayloadPortHook);
+    DWORD* hookAddr = calcModuleAddress(getMatchmakingAddress(), CreateGamePayloadPortHook);
     functionInjectorReturn(hookAddr, jumperFunction, jmpBackAddr, 9);
 }
 
@@ -258,6 +258,7 @@ int prepareLobby(PatchSettings* settings) {
     switch (settings->gameVersion) {
     case V_BASE_GOG:
     case V_BASE_GOLD:
+    case V_ADDON_GOLD:
         return LobbyPatch(settings).run();
         break;
 
