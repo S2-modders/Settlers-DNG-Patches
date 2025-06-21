@@ -44,6 +44,7 @@ HMODULE getMatchmakingAddress() {
 bool checkPortForward(std::string& hostIP, const char* serverIP, int apiPort) {
     std::stringstream url;
     url << "http://" << serverIP << ":" << apiPort;
+    logger.debug() << "Connecting to: " << url.str() << std::endl;
 
     httplib::Client client(url.str());
 
@@ -95,7 +96,7 @@ bool requestNetworkBridge(unsigned int& hostPort, const char* serverIP, int apiP
     httplib::Client httpClient(url.str());
 
     logger.info() << "Requesting host port - ";
-    if (auto res = httpClient.Get("/request/port")) {
+    if (auto res = httpClient.Get("/port/request")) {
         switch (res->status) {
         case 200:
             hostPort = std::atoi(res->body.c_str());
@@ -175,16 +176,19 @@ void createNetBridge() {
     logger.debug("CreateGameServerPayload triggered");
 
     auto serverIP = lobbyData->serverAddr.IP;
-    auto serverPort = lobbyData->apiPort;
+    auto apiPort = lobbyData->apiPort;
 
-    if (checkPortForward(hostIP, serverIP, serverPort)) {
+    if (checkPortForward(hostIP, serverIP.c_str(), apiPort)) {
+        logger.debug("direct connect possible");
         hostPort = lobbyData->gamePort;
         return;
     }
 
-    if (createBridge && !requestNetworkBridge(hostPort, serverIP, serverPort)) {
+#if 0
+    if (createBridge && !requestNetworkBridge(hostPort, serverIP.c_str(), apiPort)) {
         hostPort = 9999; // misused as error code for the lobby server
     }
+#endif
 }
 void __declspec(naked) jumperFunction() {
     __asm {
@@ -238,8 +242,8 @@ void LobbyPatch::hookCreateGameServerPayload() {
     hostPort = settings->lobbySettings->gamePort;
     createBridge = settings->lobbySettings->bCreateBridge;
 
-    DWORD hookAddr = (DWORD)getMatchmakingAddress() + CreateGamePayloadPortHook;
-    functionInjectorReturn((DWORD*)hookAddr, jumperFunction, jmpBackAddr, 9);
+    DWORD* hookAddr = calcModuleAddress(getModuleAddress("matchmaking.dll"), CreateGamePayloadPortHook);
+    functionInjectorReturn(hookAddr, jumperFunction, jmpBackAddr, 9);
 }
 
 

@@ -5,6 +5,8 @@
  */
 #pragma once
 
+#include <string>
+
 #include <SimpleIni.h>
 
 const int startupDelay = 4000; // in ms
@@ -23,7 +25,7 @@ enum GameVersion {
 };
 
 struct ServerAddr {
-    const char* IP;
+    std::string IP;
     unsigned int Port;
 };
 

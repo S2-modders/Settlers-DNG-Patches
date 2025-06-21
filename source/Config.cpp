@@ -45,11 +45,10 @@ CameraData::CameraData(CSimpleIniA& ini) {
 
 LobbySettings::LobbySettings(CSimpleIniA& ini) {
     bEnabled = ini.GetBoolValue("Lobby", "enabled", false);
-    ServerAddr addr = {
-        ini.GetValue("Lobby", "ServerIP", "www.diesiedler2lobby.de"),
-        (unsigned int)ini.GetLongValue("Lobby", "ServerPort", 8777)
+    serverAddr = {
+        .IP = std::string(ini.GetValue("Lobby", "ServerIP", "www.diesiedler2lobby.de")),
+        .Port = (unsigned int)ini.GetLongValue("Lobby", "ServerPort", 8777)
     };
-    serverAddr = addr;
     patchLevel = ini.GetLongValue("Lobby", "PatchLevel", 9212);
     bTincatDebug = ini.GetBoolValue("Lobby", "DebugMode");
     gamePort = 5479; // config option possible but IMO not needed
