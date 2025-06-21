@@ -18,6 +18,7 @@ data/*.dll
 data/d3d9vk*
 
 *.vcxproj*
+*.code-workspace
 
 .vs/
 .idea/
