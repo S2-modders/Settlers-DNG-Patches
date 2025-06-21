@@ -18,22 +18,22 @@ struct PatchData {
     memoryPTR worldObject;
     memoryPTR maxZoom;
     memoryPTR currZoom;
-    DWORD lobbyVersionFilterAddr;
-    DWORD gameVersionAddr;
     DWORD zoomIncrAddr;
     DWORD zoomDecrAddr;
+    DWORD fileLoadAddr;
+    DWORD fileLoadEndAddr;
+    DWORD lobbyVersionFilterAddr;
 };
 
 DWORD WINAPI MainPatchThread(LPVOID param);
 
 class MainPatch {
 public:
-    explicit MainPatch(PatchData& patchData, PatchSettings* settings);
-
-    int run();
     static void startupMessage();
-
     static int calcMaxFramerate(int maxFrameRate = 0, bool vSync = true);
+
+    explicit MainPatch(PatchData& patchData, PatchSettings* settings);
+    int run();
 
 private:
     PatchData& patchData;
@@ -45,9 +45,11 @@ private:
 
     float newZoomValue = 4.0f; // 4 is the default zoom value
 
-    bool isWorldObject();
+    void waitGameLoad();
+    long long waitGameInit();
 
-    void patchFileLoader();
+    void patchFileLoad();
+    void patchFileStore();
 
     void patchCamera();
     void patchZoomIncrement();

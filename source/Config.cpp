@@ -9,7 +9,7 @@
 #include <Helper.h>
 #include "Config.h"
 
-EngineData::EngineData(CSimpleIniA& ini) {
+GameSettings::GameSettings(CSimpleIniA& ini) {
     bHardwareCursor = !ini.GetBoolValue("Game", "CursorFix");
     fpsLimit = ini.GetLongValue("Game", "FPSLimit");
     bVSync = ini.GetBoolValue("Game", "ForceVSync", true);
@@ -20,7 +20,8 @@ EngineData::EngineData(CSimpleIniA& ini) {
     bDebugMode = ini.GetBoolValue("Misc", "DebugMode");
     bDebugWindow = ini.GetBoolValue("Misc", "DebugWindow");
 
-    bDecryptPatch = ini.GetBoolValue("Misc", "DecryptPatch");
+    bFileLoadPatch = ini.GetBoolValue("Misc", "FileLoadPatch", true);
+    bFileStorePatch = ini.GetBoolValue("Misc", "FileStorePatch");
 }
 
 CameraData::CameraData(CSimpleIniA& ini) {
@@ -56,14 +57,14 @@ LobbyData::LobbyData(CSimpleIniA& ini) {
 }
 
 
-PatchSettings::PatchSettings(EngineData* eg, CameraData* cd, LobbyData* ld) 
-    : engineData(eg), cameraData(cd), lobbyData(ld) {
+PatchSettings::PatchSettings(GameSettings* eg, CameraData* cd, LobbyData* ld) 
+    : gameSettings(eg), cameraData(cd), lobbyData(ld) {
     cursor = NULL;
     gameVersion = V_UNKNOWN;
 }
 
 
-void EngineData::writeEngineConfig(char* path) {
+void GameSettings::writeEngineConfig(char* path) {
     CSimpleIniA ini;
     ini.SetUnicode(false);
 
@@ -106,7 +107,7 @@ void LobbyData::writeNetworkConfig(char* path) {
     ini.SaveFile(path);
 }
 
-void EngineData::writeDXconfig(char* path) {
+void GameSettings::writeDXconfig(char* path) {
     std::ofstream ofstr(path, std::ios::trunc);
 
     ofstr << "d3d9.maxFrameRate = " << fpsLimit << std::endl;

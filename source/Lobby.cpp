@@ -188,9 +188,7 @@ void createNetBridge() {
 void __declspec(naked) jumperFunction() {
     __asm {
         pushad
-    }
-    createNetBridge();
-    __asm {
+        call [createNetBridge]
         popad
 
         //mov edx, [eax+0x2C]

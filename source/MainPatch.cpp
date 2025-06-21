@@ -7,9 +7,12 @@
 
 #include "pch.h"
 
+#include <chrono>
+
 #include <Logger.h>
 
 #include "MainPatch.h"
+#include "MainPatchASM.h"
 
 namespace MainPatch_Logger {
     Logging::Logger logger("MAIN");
@@ -20,150 +23,99 @@ const int retryCount = 4;
 const int retryTimeout = 2000;
 
 
- /* 
- * memory values 
- */
+/* 
+* memory values 
+*/
 
 /* DNG Base game (11757) GOG */
 namespace Base_GOG { 
-
-    memoryPTR maxZoom = {
-        0x002BD4E8,
-        { 0x4C, 0x1A8 }
+    PatchData offsets = {
+        .worldObject = {
+            0x002BD4E8,
+            { 0x4C }
+        },
+        .maxZoom = {
+            0x002BD4E8,
+            { 0x4C, 0x1A8 }
+        },
+        .currZoom = {
+            0x002BD4E8,
+            { 0x4C, 0x1A4 }
+        },
+        .zoomIncrAddr = 0x20D00E + 0x2,
+        .zoomDecrAddr = 0x20CFE4 + 0x2,
+        .fileLoadAddr = 0x193C28,           // 5355568944242C8B442438
+        .fileLoadEndAddr = 0x193DE5,        // 8B74243C8B0685C0740F
+        .lobbyVersionFilterAddr = 0x107055, // 741E8B8C24BC0000008B9424B80000005653555152
     };
-
-    memoryPTR currZoom = {
-        0x002BD4E8,
-        { 0x4C, 0x1A4 }
-    };
-
-    memoryPTR worldObject = {
-        0x002BD4E8,
-        { 0x4C }
-    };
-
-    DWORD lobbyVersionFilterAddr = 0x107055;
-    DWORD gameVersionAddr = 0x2C5A30;
-
-    DWORD zoomIncrAddr = 0x20D00E + 0x2;
-    DWORD zoomDecrAddr = 0x20CFE4 + 0x2;
-
-    PatchData patchData = {
-        worldObject,
-        maxZoom,
-        currZoom,
-        lobbyVersionFilterAddr,
-        gameVersionAddr,
-        zoomIncrAddr,
-        zoomDecrAddr
-    };
-
 }
 
 /* DNG Base game (11757) Gold Edition */
 namespace Base_Gold {
-
-    memoryPTR maxZoom = {
-        0x002B5B48,
-        { 0x4C, 0x1A8 }
-    };
-
-    memoryPTR currZoom = {
-        0x002B5B48,
-        { 0x4C, 0x1A4 }
-    };
-
-    memoryPTR worldObject = {
-        0x002B5B48,
-        { 0x4C }
-    };
-
-    DWORD lobbyVersionFilterAddr = 0x00; // unknown
-    DWORD gameVersionAddr = 0x2BE090;
-
-    DWORD zoomIncrAddr = 0x20CCDE + 0x2;
-    DWORD zoomDecrAddr = 0x20CCB4 + 0x2;
-
-    PatchData patchData = {
-        worldObject,
-        maxZoom,
-        currZoom,
-        lobbyVersionFilterAddr,
-        gameVersionAddr,
-        zoomIncrAddr,
-        zoomDecrAddr
-    };
-
-}
-
-
-/* DNG Wikinger Addon (11758) */
-namespace Addon {
-
-    memoryPTR maxZoom = {
-        0x002CA528,
-        { 0x4C, 0x1BC }
-    };
-
-    memoryPTR currZoom = {
-        0x002CA528,
-        { 0x4C, 0x1B8 }
-    };
-
-    memoryPTR worldObject = {
-        0x002CA528,
-        { 0x4C }
-    };
-
-    DWORD lobbyVersionFilterAddr = 0x00; // unknown
-    DWORD gameVersionAddr = 0x2D2DB8;
-
-    DWORD zoomIncrAddr = 0x218568 + 0x2;
-    DWORD zoomDecrAddr = 0x21853E + 0x2;
-
-    PatchData patchData = {
-        worldObject,
-        maxZoom,
-        currZoom,
-        lobbyVersionFilterAddr,
-        gameVersionAddr,
-        zoomIncrAddr,
-        zoomDecrAddr
+    PatchData offsets = {
+        .worldObject = {
+            0x002B5B48,
+            { 0x4C }
+        },
+        .maxZoom = {
+            0x002B5B48,
+            { 0x4C, 0x1A8 }
+        },
+        .currZoom = {
+            0x002B5B48,
+            { 0x4C, 0x1A4 }
+        },
+        .zoomIncrAddr = 0x20CCDE + 0x2,
+        .zoomDecrAddr = 0x20CCB4 + 0x2,
+        .fileLoadAddr = 0x193B78,
+        .fileLoadEndAddr = 0x193D35,
+        .lobbyVersionFilterAddr = 0x107365,
     };
 }
 
 /* DNG Wikinger Addon (11758) Gold Edition */
 namespace Addon_Gold {
-
-    memoryPTR maxZoom = {
-        0x002C2BA8,
-        { 0x4C, 0x1BC }
+    PatchData offsets = {
+        .worldObject = {
+            0x002C2BA8,
+            { 0x4C }
+        },
+        .maxZoom = {
+            0x002C2BA8,
+            { 0x4C, 0x1BC }
+        },
+        .currZoom = {
+            0x002C2BA8,
+            { 0x4C, 0x1B8 }
+        },
+        .zoomIncrAddr = 0x2182C8 + 0x2,
+        .zoomDecrAddr = 0x21829E + 0x2,
+        .fileLoadAddr = 0x19D788,
+        .fileLoadEndAddr = 0x19D945,
+        .lobbyVersionFilterAddr = 0,
     };
+}
 
-    memoryPTR currZoom = {
-        0x002C2BA8,
-        { 0x4C, 0x1B8 }
-    };
-
-    memoryPTR worldObject = {
-        0x002C2BA8,
-        { 0x4C }
-    };
-
-    DWORD lobbyVersionFilterAddr = 0x00; // unknown
-    DWORD gameVersionAddr = 0x2CB438;
-
-    DWORD zoomIncrAddr = 0x2182C8 + 0x2;
-    DWORD zoomDecrAddr = 0x21829E + 0x2;
-
-    PatchData patchData = {
-        worldObject,
-        maxZoom,
-        currZoom,
-        lobbyVersionFilterAddr,
-        gameVersionAddr,
-        zoomIncrAddr,
-        zoomDecrAddr
+/* DNG Wikinger Addon (11758) */
+namespace Addon {
+    PatchData offsets = {
+        .worldObject = {
+            0x002CA528,
+            { 0x4C }
+        },
+        .maxZoom = {
+            0x002CA528,
+            { 0x4C, 0x1BC }
+        },
+        .currZoom = {
+            0x002CA528,
+            { 0x4C, 0x1B8 }
+        },
+        .zoomIncrAddr = 0x218568 + 0x2,
+        .zoomDecrAddr = 0x21853E + 0x2,
+        .fileLoadAddr = 0,
+        .fileLoadEndAddr = 0,
+        .lobbyVersionFilterAddr = 0,
     };
 }
 
@@ -214,28 +166,30 @@ int MainPatch::run() {
         }, settings->cameraData->VkConfigPath);
     rmThread.detach();
 
-    // TODO file load decrypt patch
-    patchFileLoader();
+    logger.info("Waiting for application init...");
+    waitGameLoad();
 
-    logger.info("Waiting for application startup...");
-
-    unsigned int time = 0;
-    while (isWorldObject() == false) {
-        Sleep(1);
-        time += 1;
-    }
-    logger.info() << "Game init in " << time << "ms" << std::endl;
     logger.info("MainPatch started");
 
+    if (settings->gameSettings->bFileLoadPatch) {
+        patchFileLoad();
+    }
+    if (settings->gameSettings->bFileStorePatch) {
+        patchFileStore();
+    }
+
+    auto time = waitGameInit();
+    logger.info() << "Game init in " << time << "ms" << std::endl;
+
     //patchLobbyFilter();
-    //patchFogDisable();
+    //patchFogDisable(); # FIXME causes crash, something is fucked up
 
     for (;; Sleep(1000)) {
         worldObj = (float*)tracePointer(&patchData.worldObject);
 
         patchCamera();
 
-        if (settings->engineData->bDebugMode)
+        if (settings->gameSettings->bDebugMode)
             doDebug();
 
         //setCursor();
@@ -270,9 +224,33 @@ void MainPatch::setCursor() {
     SetCursor(settings->cursor);
 }
 
-bool MainPatch::isWorldObject() {
-    DWORD* tmp = calcAddress(patchData.worldObject.base_address);
-    return *tmp > 0;
+void MainPatch::waitGameLoad() {
+    while (true) {
+        DWORD wb = *calcAddress(patchData.worldObject.base_address);
+        //std::cout << wb << std::endl;
+
+        if (wb == 0) {
+            return;
+        }
+
+        Sleep(1);
+    }
+}
+
+long long MainPatch::waitGameInit() {
+    auto t0 = std::chrono::steady_clock::now();
+
+    while (true) {
+        void* worldBase = (void*)*calcAddress(patchData.worldObject.base_address);
+        //std::cout << "worldBase " << worldBase << std::endl;
+
+        if (isMemoryReadable(worldBase)) {
+            auto t1 = std::chrono::steady_clock::now();
+            return std::chrono::duration_cast<std::chrono::milliseconds>(t1 - t0).count();
+        } else {
+            Sleep(1);
+        }
+    }
 }
 
 void MainPatch::patchCamera() {
@@ -367,39 +345,13 @@ void MainPatch::patchLobbyFilter() {
     writeBytes(filter, &jne, 2);
 }
 
-float fogStart = 1000;
-DWORD ret1;
-void _declspec(naked) jumperFogPatch1() {
-    __asm {
-        fld dword ptr [fogStart]
-        fstp dword ptr [esi+0x6C]
-        
-        fstp st(0)
-        fld st(0)
-        jmp [ret1]
-    }
-}
-float fogEnd = 1000;
-DWORD ret2;
-void _declspec(naked) jumperFogPatch2() {
-    __asm {
-        fld dword ptr [fogEnd]
-        fstp dword ptr [esi+0x70]
-
-        fstp st(0)
-        fmul dword ptr [eax+0x40]
-        jmp[ret2]
-    }
-}
-
 void MainPatch::patchFogDisable() {
     logger.debug("fog patch");
 
     DWORD* fogStart = calcAddress(0x13CECA);
     DWORD* fogEnd = calcAddress(0x13CEDD);
 
-    functionInjectorReturn(fogStart, jumperFogPatch1, ret1, 5);
-    functionInjectorReturn(fogEnd, jumperFogPatch2, ret2, 6);
+    FogPatch::injectJumperFog(fogStart, fogEnd);
 }
 
 void MainPatch::doDebug() {
@@ -440,172 +392,24 @@ bool MainPatch::isZoomOverride() {
     return settings->cameraData->customZoom > 0;
 }
 
+void MainPatch::patchFileLoad() {
+    DWORD* fileloadFktAddr = calcAddress(patchData.fileLoadAddr);
 
-struct Stringbla {
-    DWORD unknown;
-    char* filename;
-    DWORD unknown2;
-    DWORD unknown3;
-    DWORD unknown4;
-    int length;
-    int bufferSize;
-};
-
-DWORD FilenamePtr = 0;
-DWORD FilebufferPtr = 0;
-DWORD FilebufferSizePtr = 0;
-DWORD ret3;
-
-static bool IsEncrypted = false;
-
-void lolol2() {
-    Stringbla* ptr = (Stringbla*)FilenamePtr;
-    char* filebuffer = *(char**)FilebufferPtr;
-
-    IsEncrypted = strncmp(filebuffer + 0x4, "rc00", 4) == 0;
-
-    logger.debug() << "-- loading: " 
-        << IsEncrypted << " | "
-        << ptr->filename 
-        << std::endl;
-
-    /*
-    logger.info(" -------- new file -------- ");
-    logger.info() << "EBX content: \n"
-        << "filename: " << ptr->filename << "\n"
-        << "string length: " << ptr->length << "\n"
-        << "string buffer size: " << ptr->bufferSize << "\n"
-        << "first file bytes: " << **(int**)FilebufferPtr << "\n"
-        << "file buffer size: " << *(int*)FilebufferSizePtr << "\n"
-        << "file encrypted: ";
-
-    if (IsEncrypted) {
-        logger.naked("YES");
-    }
-    else {
-        logger.naked("NO");
-    }
-
-    logger.naked() << std::endl;
-    */
-}
-
-void _declspec(naked) nakedFileLoadTest() {
-    __asm {
-        push eax
-        
-        mov eax, [esp+0x28+0x4]
-        mov [FilenamePtr], eax
-
-        mov eax, [esp + 0x28 + 0x4 + 0x4]
-        mov[FilebufferPtr], eax
-
-        mov eax, [esp + 0x28 + 0x4 + 0x4 + 0x4]
-        mov[FilebufferSizePtr], eax
-
-        pop eax
-
-        push ebx
-        push ebp
-        push esi
-        mov [esp+0x2C], eax
-
-        pushad
-        call [lolol2]
-        popad
-    }
-
-    if (IsEncrypted) {
-        __asm {
-            jmp [ret3]
-        }
-    }
-    else {
-        // cleanup and RET
-        __asm {
-            pop esi
-            pop ebp
-            pop ebx
-
-            add esp, 0x24
-            ret
-        }
-    }
-}
-
-static void storeDecryptedData() {
-    Stringbla* ptr = (Stringbla*)FilenamePtr;
-    char* filebuffer = (char*)FilebufferPtr;
-    int filebuffersize = (int)FilebufferSizePtr;
-
-    char suffix[9] = ".decrypt";
-    int newStringSize = ptr->length + sizeof(suffix);
-    
-    char* newFilename = (char*)malloc(newStringSize);
-
-    strncpy_s(newFilename, newStringSize, ptr->filename, ptr->length);
-    strncat_s(newFilename, newStringSize, suffix, sizeof(suffix));
-
-    /*
-    logger.debug() << "NEW FILENAME: " << newFilename << "\n"
-        << "filebuffersize: " << filebuffersize
-        << std::endl;
-    */
-
-    std::ofstream fileOutput;
-    fileOutput.open(newFilename, std::ios::binary | std::ios::trunc);
-    fileOutput.write(filebuffer, filebuffersize);
-    fileOutput.close();
-
-    free(newFilename);
-}
-
-DWORD ret4;
-void _declspec(naked) storeEncryptedData() {
-    __asm {
-        push edx
-        push ecx
-
-        mov edx, [esp+0x10+0x8]
-        mov [FilebufferSizePtr], edx
-
-        mov ecx, [esp+0x14+0x8]
-        mov [FilebufferPtr], ecx
-
-        pop ecx
-        pop edx
-
-        pushad
-        call [storeDecryptedData]
-        popad
-
-        mov esi, [esp + 0x3C]
-        mov eax, [esi]
-
-        jmp [ret4]
-    }
-}
-
-void MainPatch::patchFileLoader() {
-    DWORD* fileloadFktAddr = calcAddress(0x193B78);
-
+#if 0
     int time = 0;
-
     while (*fileloadFktAddr == 0) {
         Sleep(1);
         time += 1;
     }
     logger.info() << "Function might be loaded; took:" << time << "ms" << std::endl;
+#endif
 
-    if (functionInjectorReturn(fileloadFktAddr, nakedFileLoadTest, ret3, 7)) {
-        logger.info("data decrypt function inject");
-    }
+    DecryptPatch::injectFileLoad(fileloadFktAddr);
+}
 
-    DWORD* fileloadFktEndAddr = calcAddress(0x193D35);
-
-    if (functionInjectorReturn(fileloadFktEndAddr, storeEncryptedData, ret4, 6)) {
-        logger.info("data decrypt store function inject");
-    }
+void MainPatch::patchFileStore() {
+    DWORD* fileloadFktEndAddr = calcAddress(patchData.fileLoadEndAddr);
+    DecryptPatch::injectFileStore(fileloadFktEndAddr);
 }
 
 static int prepareMain(PatchSettings* settings) {
@@ -613,22 +417,24 @@ static int prepareMain(PatchSettings* settings) {
     switch (settings->gameVersion) {
     case V_BASE_GOG:
         logger.info("Found DNG GOG version");
-        return MainPatch(Base_GOG::patchData, settings).run();
-        break;
-
-    case V_ADDON_NOCD:
-        logger.info("Found Wikinger Retail noCD version");
-        return MainPatch(Addon::patchData, settings).run();
+        return MainPatch(Base_GOG::offsets, settings).run();
         break;
 
     case V_BASE_GOLD:
         logger.info("Found DNG Gold Edition");
-        return MainPatch(Base_Gold::patchData, settings).run();
+        return MainPatch(Base_Gold::offsets, settings).run();
         break;
     case V_ADDON_GOLD:
         logger.info("Found Wikinger Gold Edition");
-        return MainPatch(Addon_Gold::patchData, settings).run();
+        return MainPatch(Addon_Gold::offsets, settings).run();
         break;
+
+    /*
+    case V_ADDON_NOCD:
+        logger.info("Found Wikinger Retail noCD version");
+        return MainPatch(Addon::patchData, settings).run();
+        break;
+    */
 
     default:
         logger.error() << "This game version is not supported! \n"

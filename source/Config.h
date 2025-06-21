@@ -27,18 +27,19 @@ struct ServerAddr {
     unsigned int Port;
 };
 
-struct EngineData {
+struct GameSettings {
     bool bHardwareCursor;
     bool bVSync;
     bool bVulkan;
     bool bDebugMode;
     bool bDebugWindow;
-    bool bDecryptPatch;
+    bool bFileLoadPatch;
+    bool bFileStorePatch;
     int fpsLimit;
     int MSAA;
     int Anisotropy;
 
-    EngineData(CSimpleIniA& ini);
+    GameSettings(CSimpleIniA& ini);
     void writeEngineConfig(char* path);
     void writeDXconfig(char* path);
 };
@@ -69,11 +70,11 @@ struct LobbyData {
 struct PatchSettings {
     HCURSOR cursor;
     GameVersion gameVersion;
-    EngineData* engineData;
+    GameSettings* gameSettings;
     CameraData* cameraData;
     LobbyData* lobbyData;
 
-    PatchSettings(EngineData* eg, CameraData* cd, LobbyData* ld);
+    PatchSettings(GameSettings* eg, CameraData* cd, LobbyData* ld);
 };
 
 GameVersion getGameVersion(char* exePath);

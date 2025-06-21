@@ -231,6 +231,7 @@ HCURSOR test(HMODULE hm) {
 DllMain
 *************************/
 
+
 static char VkConfigPath[MAX_PATH];
 
 bool WINAPI DllMain(HMODULE hModule, DWORD fdwReason, LPVOID lpReserved) {
@@ -261,36 +262,36 @@ bool WINAPI DllMain(HMODULE hModule, DWORD fdwReason, LPVOID lpReserved) {
         config.SetUnicode();
         config.LoadFile(configPath);
 
-        auto* engineData = new EngineData(config);
+        auto* gameSettings = new GameSettings(config);
         auto* cameraData = new CameraData(config);
         auto* lobbyData = new LobbyData(config);
-        auto* settings = new PatchSettings(engineData, cameraData, lobbyData);
+        auto* settings = new PatchSettings(gameSettings, cameraData, lobbyData);
         settings->gameVersion = getGameVersion(mainExecutable);
 
-        Logging::Logger logger("DX9", logFile, engineData->bDebugWindow);
+        Logging::Logger logger("DX9", logFile, gameSettings->bDebugWindow);
         MainPatch::startupMessage();
 
         logger.debug() << "launching from: " << mainExecutable << std::endl;
 
-        if (engineData->bDebugWindow)
+        if (gameSettings->bDebugWindow)
             logger.info("logging to DebugWindow");
         else
             logger.info() << "logging to " << logFile << std::endl;
 
         int refreshRate = getDesktopRefreshRate();
-        engineData->fpsLimit = MainPatch::calcMaxFramerate(engineData->fpsLimit, engineData->bVSync);
+        gameSettings->fpsLimit = MainPatch::calcMaxFramerate(gameSettings->fpsLimit, gameSettings->bVSync);
 
         logger.debug() << "Detected refresh rate: " << refreshRate << "Hz | "
-            << "Enforced fps limit: " << engineData->fpsLimit << "fps"
+            << "Enforced fps limit: " << gameSettings->fpsLimit << "fps"
             << std::endl;
 
-        if (engineData->bVulkan) {
+        if (gameSettings->bVulkan) {
             if (isVulkanSupported()) {
                 logger.debug("Vulkan supported!");
             }
             else {
                 logger.debug("Vulkan NOT supported!");
-                engineData->bVulkan = false;
+                gameSettings->bVulkan = false;
             }
         }
         else {
@@ -298,7 +299,7 @@ bool WINAPI DllMain(HMODULE hModule, DWORD fdwReason, LPVOID lpReserved) {
         }
 
         logger.debug("Setting engine INI");
-        engineData->writeEngineConfig(engineINI);
+        gameSettings->writeEngineConfig(engineINI);
 
         if (lobbyData->bEnabled) {
             logger.debug("Setting network INI");
@@ -307,7 +308,7 @@ bool WINAPI DllMain(HMODULE hModule, DWORD fdwReason, LPVOID lpReserved) {
 
         char path[MAX_PATH];
 
-        if (!isWine() && engineData->bVulkan) {
+        if (!isWine() && gameSettings->bVulkan) {
             getGameDirectory(baseModule, path, MAX_PATH, "\\bin\\__config_cache", 1);
             memcpy_s(cameraData->VkConfigPath, MAX_PATH, path, MAX_PATH);
             memcpy_s(VkConfigPath, MAX_PATH, path, MAX_PATH);
@@ -325,9 +326,9 @@ bool WINAPI DllMain(HMODULE hModule, DWORD fdwReason, LPVOID lpReserved) {
             GetSystemDirectoryA(path, MAX_PATH);
             strcat_s(path, "\\d3d9.dll");
 
-            if (engineData->fpsLimit > 0) {
+            if (gameSettings->fpsLimit > 0) {
                 bFPSLimit = true;
-                fFPSLimit = (float)engineData->fpsLimit;
+                fFPSLimit = (float)gameSettings->fpsLimit;
             }
             else
                 bFPSLimit = false;
@@ -335,13 +336,13 @@ bool WINAPI DllMain(HMODULE hModule, DWORD fdwReason, LPVOID lpReserved) {
 
         logger.naked(path);
 
-        if (engineData->bVulkan || isWine()) {
-            if (!engineData->bDebugMode)
+        if (gameSettings->bVulkan || isWine()) {
+            if (!gameSettings->bDebugMode)
                 SetEnvironmentVariableA("DXVK_LOG_LEVEL", "none");
             SetEnvironmentVariableA("DXVK_CONFIG_FILE", cameraData->VkConfigPath);
 
             logger.debug("Writing Vk config cache");
-            engineData->writeDXconfig(cameraData->VkConfigPath);
+            gameSettings->writeDXconfig(cameraData->VkConfigPath);
         }
 
 
