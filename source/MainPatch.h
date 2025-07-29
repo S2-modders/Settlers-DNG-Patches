@@ -22,7 +22,8 @@ struct PatchData {
     DWORD zoomDecrAddr;
     DWORD fileLoadAddr;
     DWORD fileLoadEndAddr;
-    DWORD lobbyVersionFilterAddr;
+    DWORD lobbyVersionFilterAddr1;
+    DWORD lobbyVersionFilterAddr2;
 };
 
 DWORD WINAPI MainPatchThread(LPVOID param);

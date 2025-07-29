@@ -28,74 +28,72 @@ const int retryTimeout = 2000;
 */
 
 /* DNG Base game (11757) GOG */
-namespace Base_GOG { 
-    PatchData offsets = {
-        .worldObject = {
-            0x002BD4E8,
-            { 0x4C }
-        },
-        .maxZoom = {
-            0x002BD4E8,
-            { 0x4C, 0x1A8 }
-        },
-        .currZoom = {
-            0x002BD4E8,
-            { 0x4C, 0x1A4 }
-        },
-        .zoomIncrAddr = 0x20D00E + 0x2,
-        .zoomDecrAddr = 0x20CFE4 + 0x2,
-        .fileLoadAddr = 0x193C28,           // 5355568944242C8B442438
-        .fileLoadEndAddr = 0x193DE5,        // 8B74243C8B0685C0740F
-        .lobbyVersionFilterAddr = 0x107055, // 741E8B8C24BC0000008B9424B80000005653555152
-    };
-}
+PatchData Base_GOG_offsets = {
+    .worldObject = {
+        0x002BD4E8,
+        { 0x4C }
+    },
+    .maxZoom = {
+        0x002BD4E8,
+        { 0x4C, 0x1A8 }
+    },
+    .currZoom = {
+        0x002BD4E8,
+        { 0x4C, 0x1A4 }
+    },
+    .zoomIncrAddr = 0x20D00E + 0x2,
+    .zoomDecrAddr = 0x20CFE4 + 0x2,
+    .fileLoadAddr = 0x193C28,            // 5355568944242C8B442438
+    .fileLoadEndAddr = 0x193DE5,         // 8B74243C8B0685C0740F
+    .lobbyVersionFilterAddr1 = 0x105539, // 83BD4016000001754683BD5C160000108B8D581600007208
+    .lobbyVersionFilterAddr2 = 0x1057BA, // BE010000003BC6754883BD5C160000108B8D5816000072088B8548160000EB06
+};
 
 /* DNG Base game (11757) Gold Edition */
-namespace Base_Gold {
-    PatchData offsets = {
-        .worldObject = {
-            0x002B5B48,
-            { 0x4C }
-        },
-        .maxZoom = {
-            0x002B5B48,
-            { 0x4C, 0x1A8 }
-        },
-        .currZoom = {
-            0x002B5B48,
-            { 0x4C, 0x1A4 }
-        },
-        .zoomIncrAddr = 0x20CCDE + 0x2,
-        .zoomDecrAddr = 0x20CCB4 + 0x2,
-        .fileLoadAddr = 0x193B78,
-        .fileLoadEndAddr = 0x193D35,
-        .lobbyVersionFilterAddr = 0x107365,
-    };
-}
+PatchData Base_Gold_offsets = {
+    .worldObject = {
+        0x002B5B48,
+        { 0x4C }
+    },
+    .maxZoom = {
+        0x002B5B48,
+        { 0x4C, 0x1A8 }
+    },
+    .currZoom = {
+        0x002B5B48,
+        { 0x4C, 0x1A4 }
+    },
+    .zoomIncrAddr = 0x20CCDE + 0x2,
+    .zoomDecrAddr = 0x20CCB4 + 0x2,
+    .fileLoadAddr = 0x193B78,
+    .fileLoadEndAddr = 0x193D35,
+    .lobbyVersionFilterAddr1 = 0x105849,
+    .lobbyVersionFilterAddr2 = 0x105ACA,
+};
 
 /* DNG Wikinger Addon (11758) Gold Edition */
-namespace Addon_Gold {
-    PatchData offsets = {
-        .worldObject = {
-            0x002C2BA8,
-            { 0x4C }
-        },
-        .maxZoom = {
-            0x002C2BA8,
-            { 0x4C, 0x1BC }
-        },
-        .currZoom = {
-            0x002C2BA8,
-            { 0x4C, 0x1B8 }
-        },
-        .zoomIncrAddr = 0x2182C8 + 0x2,
-        .zoomDecrAddr = 0x21829E + 0x2,
-        .fileLoadAddr = 0x19D788,
-        .fileLoadEndAddr = 0x19D945,
-        .lobbyVersionFilterAddr = 0,
-    };
-}
+PatchData Addon_Gold_offsets = {
+    .worldObject = {
+        0x002C2BA8,
+        { 0x4C }
+    },
+    .maxZoom = {
+        0x002C2BA8,
+        { 0x4C, 0x1BC }
+    },
+    .currZoom = {
+        0x002C2BA8,
+        { 0x4C, 0x1B8 }
+    },
+    .zoomIncrAddr = 0x2182C8 + 0x2,
+    .zoomDecrAddr = 0x21829E + 0x2,
+    .fileLoadAddr = 0x19D788,
+    .fileLoadEndAddr = 0x19D945,
+    .lobbyVersionFilterAddr1 = 0,
+    .lobbyVersionFilterAddr2 = 0,
+};
 
+#ifdef RETAIL_ADDON
 /* DNG Wikinger Addon (11758) */
 namespace Addon {
     PatchData offsets = {
@@ -118,6 +116,7 @@ namespace Addon {
         .lobbyVersionFilterAddr = 0,
     };
 }
+#endif
 
 /*###################################*/
 
@@ -181,7 +180,7 @@ int MainPatch::run() {
     auto time = waitGameInit();
     logger.info() << "Game init in " << time << "ms" << std::endl;
 
-    //patchLobbyFilter();
+    patchLobbyFilter();
     //patchFogDisable(); # FIXME causes crash, something is fucked up
 
     for (;; Sleep(1000)) {
@@ -335,14 +334,22 @@ bool MainPatch::calcZoomValue() {
 }
 
 void MainPatch::patchLobbyFilter() {
-    if (patchData.lobbyVersionFilterAddr == 0)
+    if (patchData.lobbyVersionFilterAddr1 == 0)
         return;
 
     logger.debug("patching lobby version filter");
 
+#if 0
     short jne = 0x1E75;
     short* filter = (short*)calcAddress(patchData.lobbyVersionFilterAddr);
     writeBytes(filter, &jne, 2);
+#else
+    char zero = 0x00;
+    char* filter1 = (char*)calcAddress(patchData.lobbyVersionFilterAddr1);
+    char* filter2 = (char*)calcAddress(patchData.lobbyVersionFilterAddr2);
+    writeBytes(filter1, &zero, 1);
+    writeBytes(filter2, &zero, 1);
+#endif
 }
 
 void MainPatch::patchFogDisable() {
@@ -417,24 +424,24 @@ static int prepareMain(PatchSettings* settings) {
     switch (settings->gameVersion) {
     case V_BASE_GOG:
         logger.info("Found DNG GOG version");
-        return MainPatch(Base_GOG::offsets, settings).run();
+        return MainPatch(Base_GOG_offsets, settings).run();
         break;
 
     case V_BASE_GOLD:
         logger.info("Found DNG Gold Edition");
-        return MainPatch(Base_Gold::offsets, settings).run();
+        return MainPatch(Base_Gold_offsets, settings).run();
         break;
     case V_ADDON_GOLD:
         logger.info("Found Wikinger Gold Edition");
-        return MainPatch(Addon_Gold::offsets, settings).run();
+        return MainPatch(Addon_Gold_offsets, settings).run();
         break;
 
-    /*
+#ifdef RETAIL_ADDON
     case V_ADDON_NOCD:
         logger.info("Found Wikinger Retail noCD version");
         return MainPatch(Addon::patchData, settings).run();
         break;
-    */
+#endif
 
     default:
         logger.error() << "This game version is not supported! \n"
