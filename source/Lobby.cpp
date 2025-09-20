@@ -31,7 +31,7 @@ DWORD CreateGamePayloadPortHook = 0x60FA;
 const int retryCount = 10;
 const int retryTimeout = 1000;
 
-LobbySettings* lobbyData;
+LobbySettings* lobbySettings;
 
 LPSTARTUPINFOA si;
 PROCESS_INFORMATION bridgeProcessInfo;
@@ -89,11 +89,14 @@ bool requestControllerPort(unsigned int& port, const char* serverIP, int apiPort
     return false;
 }
 
-bool requestNetworkBridge(unsigned int& hostPort, const char* serverIP, int apiPort) {
+bool requestNetworkBridge(unsigned int& hostPort, const char* serverIP, int apiPort, int localPort) {
     std::stringstream url;
     url << "http://" << serverIP << ":" << apiPort;
 
     httplib::Client httpClient(url.str());
+
+    // TODO bridge port request should be done against bridge server, not lobby server
+    // move port request into bridge.dll
 
     logger.info() << "Requesting host port - ";
     if (auto res = httpClient.Get("/port/request")) {
@@ -116,6 +119,30 @@ bool requestNetworkBridge(unsigned int& hostPort, const char* serverIP, int apiP
         return false;
     }
 
+    char exePath[MAX_PATH];
+    GetCurrentDirectoryA(MAX_PATH, exePath);
+    strcat_s(exePath, "\\bin\\tincat3bridge.dll");
+    logger.debug() << "bridge DLL: " << exePath << std::endl;
+
+    HMODULE h = LoadLibraryA(exePath);
+    if (!h) {
+        logger.error() << "failed to load " << exePath << std::endl;
+        return false;
+    }
+
+    auto CreateBridge = (int (*)(const char*,int,int,int)) GetProcAddress(h, "CreateBridge");
+    if (!CreateBridge) {
+        logger.error("failed to load symbol CreateBridge");
+        return false;
+    }
+
+    int ret = CreateBridge(serverIP, apiPort, hostPort, localPort);
+    if (ret > 0) {
+        logger.error() << "failed to create bridge connector (" << ret << ")" << std::endl;
+        return false;
+    }
+
+#if 0
     if (bridgeProcessInfo.dwProcessId > 0) {
         logger.debug() << "Bridge process seems to be running: " << bridgeProcessInfo.dwProcessId << std::endl;
 
@@ -138,6 +165,7 @@ bool requestNetworkBridge(unsigned int& hostPort, const char* serverIP, int apiP
         return false;
     }
 
+    tincat3bridge.dll
     char exePath[MAX_PATH];
     GetCurrentDirectoryA(MAX_PATH, exePath);
     strcat_s(exePath, "\\bin\\tincat3bridge.dll");
@@ -161,13 +189,14 @@ bool requestNetworkBridge(unsigned int& hostPort, const char* serverIP, int apiP
     CreateProcessA(NULL, (LPSTR)command.str().c_str(), NULL, NULL, false, 0, NULL, NULL, si, &bridgeProcessInfo);
 
     logger.debug("End injected function");
+#endif
+
     return true;
 }
 
 
 std::string hostIP; // public IP of this client
 unsigned int hostPort = 0;
-bool createBridge;
 
 DWORD jmpBackAddr;
 DWORD portStrAddr = (DWORD)getMatchmakingAddress() + 0xA7EC;
@@ -175,12 +204,25 @@ DWORD portStrAddr = (DWORD)getMatchmakingAddress() + 0xA7EC;
 void createNetBridge() {
     logger.debug("CreateGameServerPayload triggered");
 
-    auto serverIP = lobbyData->serverAddr.IP;
-    auto apiPort = lobbyData->apiPort;
+    auto serverIP = lobbySettings->serverAddr.IP;
+    auto apiPort = lobbySettings->apiPort;
+    auto localPort = lobbySettings->gamePort;
 
-    if (checkPortForward(hostIP, serverIP.c_str(), apiPort)) {
+    bool isDirectConnect = checkPortForward(hostIP, serverIP.c_str(), apiPort);
+    if (isDirectConnect) {
         logger.debug("direct connect possible");
-        hostPort = lobbyData->gamePort;
+        hostPort = localPort;
+        return;
+    }
+    else if (lobbySettings->bCreateBridge) {
+        if (!requestNetworkBridge(hostPort, serverIP.c_str(), apiPort, localPort)) {
+            hostPort = 501; // magic number error code for lobby server
+        }
+    }
+    else {
+        logger.error("direct connect not possible and bridge setting disabled");
+        logger.error("hosting is not going to work!");
+        hostPort = 502; // magic number error code for lobby server
         return;
     }
 
@@ -206,8 +248,7 @@ void __declspec(naked) jumperFunction() {
 
 LobbyPatch::LobbyPatch(PatchSettings* settings) {
     this->settings = settings;
-
-    lobbyData = this->settings->lobbySettings;
+    lobbySettings = this->settings->lobbySettings;
 }
 
 int LobbyPatch::run() {
@@ -238,9 +279,6 @@ void LobbyPatch::setTincatDebugMode() {
 
 void LobbyPatch::hookCreateGameServerPayload() {
     logger.debug("Installing hook for ServerPayload");
-
-    hostPort = settings->lobbySettings->gamePort;
-    createBridge = settings->lobbySettings->bCreateBridge;
 
     DWORD* hookAddr = calcModuleAddress(getMatchmakingAddress(), CreateGamePayloadPortHook);
     functionInjectorReturn(hookAddr, jumperFunction, jmpBackAddr, 9);

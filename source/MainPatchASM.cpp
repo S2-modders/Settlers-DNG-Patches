@@ -46,8 +46,8 @@ namespace DecryptPatch {
             << " | "
             << ptr->filename 
             << std::endl;
-    
-        /*
+
+#if 0
         logger.info(" -------- new file -------- ");
         logger.info() << "EBX content: \n"
             << "filename: " << ptr->filename << "\n"
@@ -65,21 +65,21 @@ namespace DecryptPatch {
         }
     
         logger.naked() << std::endl;
-        */
+#endif
     }
     
     void _declspec(naked) nakedFileLoadTest() {
         __asm {
             push eax
             
-            mov eax, [esp+0x28+0x4]
+            mov eax, [esp + 0x28 + 0x4]
             mov [FilenamePtr], eax
     
             mov eax, [esp + 0x28 + 0x4 + 0x4]
-            mov[FilebufferPtr], eax
+            mov [FilebufferPtr], eax
     
             mov eax, [esp + 0x28 + 0x4 + 0x4 + 0x4]
-            mov[FilebufferSizePtr], eax
+            mov [FilebufferSizePtr], eax
     
             pop eax
     
