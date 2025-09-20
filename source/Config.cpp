@@ -22,6 +22,8 @@ GameSettings::GameSettings(CSimpleIniA& ini) {
 
     bFileLoadPatch = ini.GetBoolValue("Misc", "FileLoadPatch", true);
     bFileStorePatch = ini.GetBoolValue("Misc", "FileStorePatch");
+
+    bHeavyMetal = ini.GetBoolValue("Misc", "HEAVY_METAL", false);
 }
 
 CameraData::CameraData(CSimpleIniA& ini) {
@@ -51,14 +53,9 @@ LobbySettings::LobbySettings(CSimpleIniA& ini) {
     };
     patchLevel = ini.GetLongValue("Lobby", "PatchLevel", 9212);
     bTincatDebug = ini.GetBoolValue("Lobby", "DebugMode");
-    gamePort = 5479; // config option possible but IMO not needed
+    gamePort = defaultGamePort; // config option possible but IMO not needed
     apiPort = (unsigned int)ini.GetLongValue("Lobby", "ApiPort", 6801);
-
-#if 0
     bCreateBridge = ini.GetBoolValue("Lobby", "Bridge");
-#else
-    bCreateBridge = false;
-#endif
 }
 
 

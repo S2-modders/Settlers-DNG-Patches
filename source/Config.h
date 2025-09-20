@@ -10,6 +10,7 @@
 #include <SimpleIni.h>
 
 const int startupDelay = 4000; // in ms
+const int defaultGamePort = 5479;
 
 enum GameVersion {
     V_BASE_GOG, // base game GOG (11757)
@@ -37,6 +38,7 @@ struct GameSettings {
     bool bDebugWindow;
     bool bFileLoadPatch;
     bool bFileStorePatch;
+    bool bHeavyMetal;
     int fpsLimit;
     int MSAA;
     int Anisotropy;
