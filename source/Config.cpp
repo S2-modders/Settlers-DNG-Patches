@@ -22,8 +22,6 @@ GameSettings::GameSettings(CSimpleIniA& ini) {
 
     bFileLoadPatch = ini.GetBoolValue("Misc", "FileLoadPatch", true);
     bFileStorePatch = ini.GetBoolValue("Misc", "FileStorePatch");
-
-    bHeavyMetal = ini.GetBoolValue("Misc", "HEAVY_METAL", false);
 }
 
 CameraData::CameraData(CSimpleIniA& ini) {

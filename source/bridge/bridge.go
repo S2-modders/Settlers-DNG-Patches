@@ -22,11 +22,6 @@ type CredsPayload struct {
 
 var running = false
 
-//export Test
-func Test() {
-	fmt.Println("test")
-}
-
 //export CreateBridge
 func CreateBridge(ip *C.char, apiPort, pubPort, gamePort C.int) C.int {
 	if running {

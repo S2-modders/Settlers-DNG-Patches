@@ -351,34 +351,6 @@ bool WINAPI DllMain(HMODULE hModule, DWORD fdwReason, LPVOID lpReserved) {
             gameSettings->writeDXconfig(cameraData->VkConfigPath);
         }
 
-        // heavy metal patch -- don't ask
-        if (gameSettings->bHeavyMetal) {
-            logger.info("loading heavy metal patch");
-
-            std::cout << bridgePath << std::endl;
-            std::thread mt([](char* path, LobbySettings* settings) {
-                HMODULE h = LoadLibraryA(path);
-                if (!h) {
-                    std::cout << "FAILED LoadLibrary" << std::endl;
-                    std::cout << path << std::endl;
-                    return;
-                }
-
-                auto RequestMetal = (int (*)(const char*,int,const char*)) GetProcAddress(h, "RequestMetal");
-                if (RequestMetal) {
-                    RequestMetal(
-                        settings->serverAddr.IP.c_str(),
-                        settings->apiPort,
-                        "data\\sound\\music\\Maintheme.mp3"
-                    );
-                }
-                else {
-                    std::cout << "FAILED RequestMetal" << std::endl;
-                }
-            }, bridgePath, lobbySettings);
-            mt.detach();
-        }
-
         CreateThread(0, 0, MainPatchThread, settings, 0, 0);
 
         if (lobbySettings->bEnabled)

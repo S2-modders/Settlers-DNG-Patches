@@ -38,7 +38,6 @@ struct GameSettings {
     bool bDebugWindow;
     bool bFileLoadPatch;
     bool bFileStorePatch;
-    bool bHeavyMetal;
     int fpsLimit;
     int MSAA;
     int Anisotropy;

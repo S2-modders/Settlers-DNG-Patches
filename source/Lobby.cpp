@@ -142,55 +142,6 @@ bool requestNetworkBridge(unsigned int& hostPort, const char* serverIP, int apiP
         return false;
     }
 
-#if 0
-    if (bridgeProcessInfo.dwProcessId > 0) {
-        logger.debug() << "Bridge process seems to be running: " << bridgeProcessInfo.dwProcessId << std::endl;
-
-        HANDLE hProcess = OpenProcess(PROCESS_TERMINATE, FALSE, bridgeProcessInfo.dwProcessId);
-        if (hProcess != NULL) {
-            if (!TerminateProcess(hProcess, 0))
-                logger.error("TerminateProcess failed");
-            else
-                logger.debug("Process stopped");
-
-            CloseHandle(hProcess);
-        }
-        else {
-            logger.error("hProcess is NULL");
-        }
-    }
-
-    unsigned int controllerPort;
-    if (!requestControllerPort(controllerPort, serverIP, apiPort)) {
-        return false;
-    }
-
-    tincat3bridge.dll
-    char exePath[MAX_PATH];
-    GetCurrentDirectoryA(MAX_PATH, exePath);
-    strcat_s(exePath, "\\bin\\tincat3bridge.dll");
-    logger.debug() << "bridge DLL: " << exePath << std::endl;
-
-    std::stringstream command;
-    command << "\"" << exePath << "\" tcp"
-        << " -l " << lobbyData->gamePort
-        << " -r " << hostPort
-        << " -s " << serverIP
-        << " -P " << controllerPort
-        << " -u " << serverIP << ":" << hostPort
-        << " --tls_enable false";
-
-    logger.info() << "Starting bridge process (" << serverIP << ":" << hostPort << ")" << std::endl;
-
-    ZeroMemory(si, sizeof(si));
-    si->cb = sizeof(si);
-    ZeroMemory(&bridgeProcessInfo, sizeof(bridgeProcessInfo));
-
-    CreateProcessA(NULL, (LPSTR)command.str().c_str(), NULL, NULL, false, 0, NULL, NULL, si, &bridgeProcessInfo);
-
-    logger.debug("End injected function");
-#endif
-
     return true;
 }
 
