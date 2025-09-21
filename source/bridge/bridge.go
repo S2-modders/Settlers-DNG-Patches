@@ -25,6 +25,7 @@ var running = false
 //export CreateBridge
 func CreateBridge(ip *C.char, apiPort, pubPort, gamePort C.int) C.int {
 	if running {
+		fmt.Println("bridge connection already running")
 		return 0
 	}
 
