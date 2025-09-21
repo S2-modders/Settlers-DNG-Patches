@@ -11,7 +11,7 @@
 #include "Config.h"
 
 const int version_maj = 2;
-const int version_min = 2;
+const int version_min = 3;
 
 
 struct PatchData {
